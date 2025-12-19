@@ -1,0 +1,32 @@
+[package]
+name = "chaos_targets"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "axum_http_service"
+path = "src/bin/axum_http_service.rs"
+
+[[bin]]
+name = "websocket_feed"
+path = "src/bin/websocket_feed.rs"
+
+[[bin]]
+name = "tcp_echo_server"
+path = "src/bin/tcp_echo_server.rs"
+
+[dependencies]
+tokio = { workspace = true }
+axum = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+tower = { version = "0.4", features = ["full"] }
+tower-http = { version = "0.5", features = ["fs", "trace", "cors"] }
+futures = { workspace = true }
+chrono = { workspace = true }
+rand = { workspace = true }

@@ -1,0 +1,33 @@
+[package]
+name = "chaos_cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "chaos"
+path = "src/main.rs"
+
+[dependencies]
+chaos_core = { path = "../chaos_core" }
+chaos_scenarios = { path = "../chaos_scenarios" }
+chaos_metrics = { path = "../chaos_metrics" }
+chaos_web = { path = "../chaos_web" }
+tokio = { workspace = true }
+clap = { workspace = true }
+colored = { workspace = true }
+indicatif = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tracing-appender = { workspace = true }
+chrono = { workspace = true }
+humantime = { workspace = true }
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "3.0"

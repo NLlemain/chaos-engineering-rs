@@ -1,0 +1,24 @@
+# Build artifacts
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test outputs
+test_results/*.json
+test_results/*.md
+*.log
+
+# Environment
+.env
+.env.local

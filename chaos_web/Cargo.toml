@@ -1,0 +1,45 @@
+[package]
+name = "chaos_web"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Web dashboard for chaos engineering framework"
+
+[dependencies]
+# Web framework
+axum = { workspace = true }
+hyper = { workspace = true }
+tokio = { workspace = true }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["fs", "cors"] }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Async
+futures = { workspace = true }
+async-trait = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# HTTP client for load testing
+reqwest = { version = "0.12", features = ["json"] }
+
+# Logging
+tracing = { workspace = true }
+
+# Time
+chrono = { workspace = true }
+
+# Internal crates
+chaos_core = { path = "../chaos_core" }
+chaos_scenarios = { path = "../chaos_scenarios" }
+chaos_metrics = { path = "../chaos_metrics" }
+
+[lib]
+name = "chaos_web"
+path = "src/lib.rs"

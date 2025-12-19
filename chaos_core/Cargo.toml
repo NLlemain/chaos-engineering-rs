@@ -1,0 +1,32 @@
+[package]
+name = "chaos_core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+rand = { workspace = true }
+rand_distr = { workspace = true }
+libc = { workspace = true }
+nix = { workspace = true }
+pnet = { workspace = true }
+socket2 = { workspace = true }
+futures = { workspace = true }
+sysinfo = { workspace = true }
+chrono = { workspace = true }
+uuid = { version = "1.6", features = ["v4", "serde"] }
+num_cpus = "1.16"
+reqwest = { version = "0.11", features = ["json"] }
+
+[dev-dependencies]
+mockall = { workspace = true }
+tokio-test = "0.4"

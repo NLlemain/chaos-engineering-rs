@@ -1,0 +1,27 @@
+# Quick 3-minute smoke test
+# Tests basic service resilience with CPU stress
+name: "Quick Smoke Test"
+description: "Fast 3-minute test to verify basic chaos functionality"
+seed: 42
+duration: "3m"
+
+phases:
+  # Baseline - measure normal behavior
+  - name: "baseline"
+    duration: "1m"
+    injections: []
+
+  # CPU stress - see how it handles load
+  - name: "cpu_stress"
+    duration: "1m"
+    injections:
+      - type: "cpu_starvation"
+        target:
+          process_name: "axum_http_service"
+        intensity: 0.5  # 50% CPU usage
+        threads: [0, 1]  # Pin to first 2 cores
+
+  # Recovery - make sure it bounces back
+  - name: "recovery"
+    duration: "1m"
+    injections: []

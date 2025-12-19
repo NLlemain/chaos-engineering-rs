@@ -1,0 +1,85 @@
+# Comprehensive 15-minute stress test
+# Progressive failure injection across multiple dimensions
+name: "Comprehensive Stress Test"
+description: "15-minute test with progressively intense chaos scenarios"
+seed: 12345
+duration: "15m"
+
+phases:
+  # Phase 1: Baseline (2 min)
+  - name: "baseline"
+    description: "Establish normal operation metrics"
+    duration: "2m"
+    injections: []
+
+  # Phase 2: Light network stress (2 min)
+  - name: "light_network"
+    description: "Minor network degradation"
+    duration: "2m"
+    injections:
+      - type: "network_latency"
+        target:
+          process_name: "axum_http_service"
+        delay: "20ms"
+        jitter: "5ms"
+
+  # Phase 3: Moderate combined stress (2 min)
+  - name: "moderate_combined"
+    description: "CPU load + network latency"
+    duration: "2m"
+    parallel: true  # Run both injections at the same time
+    injections:
+      - type: "cpu_starvation"
+        target:
+          process_name: "axum_http_service"
+        intensity: 0.6  # 60% CPU
+        threads: [0, 1, 2]
+      - type: "network_latency"
+        target:
+          process_name: "axum_http_service"
+        delay: "50ms"
+        jitter: "15ms"
+
+  # Phase 4: Memory pressure (2 min)
+  - name: "memory_stress"
+    description: "Fill up available memory"
+    duration: "2m"
+    injections:
+      - type: "memory_pressure"
+        target:
+          process_name: "axum_http_service"
+        target_usage: 0.75  # 75% of available memory
+        failure_rate: 0.0
+
+  # Phase 5: Heavy chaos (3 min)
+  - name: "heavy_chaos"
+    description: "Everything at once - worst case scenario"
+    duration: "3m"
+    parallel: true
+    injections:
+      - type: "cpu_starvation"
+        target:
+          process_name: "axum_http_service"
+        intensity: 0.8  # 80% CPU
+        threads: [0, 1, 2, 3, 4, 5]
+      - type: "memory_pressure"
+        target:
+          process_name: "axum_http_service"
+        target_usage: 0.85  # 85% memory
+        failure_rate: 0.0
+      - type: "packet_loss"
+        target:
+          process_name: "axum_http_service"
+        loss_rate: 0.2  # 20% packet loss
+
+  # Phase 6: Recovery (4 min)
+  - name: "recovery"
+    description: "Verify full recovery to baseline"
+    duration: "4m"
+    injections: []
+
+# Expected behavior:
+# - Service stays responsive throughout (may be slower)
+# - No crashes or data corruption
+# - Full recovery to baseline performance
+# - Error rates stay reasonable (<5%)
