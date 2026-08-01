@@ -17,6 +17,9 @@ pub enum Target {
 
     /// Target all processes matching a pattern
     ProcessPattern { pattern: String },
+
+    /// Target system-wide resources
+    System,
 }
 
 impl Target {
@@ -42,6 +45,10 @@ impl Target {
         }
     }
 
+    pub fn system() -> Self {
+        Self::System
+    }
+
     pub fn description(&self) -> String {
         match self {
             Target::Process { pid } => format!("Process PID {}", pid),
@@ -49,6 +56,7 @@ impl Target {
             Target::Container { id } => format!("Container {}", id),
             Target::Thread { tid } => format!("Thread TID {}", tid),
             Target::ProcessPattern { pattern } => format!("Process pattern '{}'", pattern),
+            Target::System => "System".to_string(),
         }
     }
 
@@ -94,6 +102,7 @@ impl Target {
                 sys.refresh_processes();
                 sys.processes().values().any(|p| p.name().contains(pattern))
             }
+            Target::System => true,
         }
     }
 }
