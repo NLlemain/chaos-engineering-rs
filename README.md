@@ -6,13 +6,13 @@
 
 **A lightweight, cross-platform chaos engineering framework for testing service resilience through controlled failure injection.**
 
-Built in Rust for performance and safety. Test how your services handle real-world failures like network issues, resource exhaustion, and process crashes.
+Built in Rust for performance and safety. Test how your services handle real-world failures like network issues, resource exhaustion, multi-cloud outages, edge CDN drops, media streaming disruptions, and process crashes.
 
 ## ✨ Features
 
-- **🌐 Cross-Platform**: Windows, macOS, Linux with platform-native chaos injection
+- **🌐 Cross-Platform**: Windows, macOS, Linux with platform-native chaos injection and graceful cross-platform fallback
 - **⚡ High Performance**: Async Rust, ~15MB memory, <1% CPU overhead
-- **🎯 7 Chaos Types**: Network latency, packet loss, TCP resets, CPU starvation, memory pressure, disk I/O, process kills
+- **🎯 20 Chaos Types**: Network latency, packet loss, TCP resets, CPU starvation, memory pressure, disk I/O, process kills, DNS faults, FD exhaustion, process freeze, clock skew, disk space fill, socket payload corruption, HTTP/L7 faults, Nginx proxy faults, AWS cloud faults, Azure cloud faults, Cloudflare edge faults, media streaming faults, crypto/security faults
 - **📋 YAML Configuration**: Declarative test scenarios with multi-phase support
 - **🖥️ Web Dashboard**: Dark-themed UI for test management and monitoring
 - **🔥 Load Testing**: Stress test HTTP, WebSocket, TCP, gRPC, HLS, RTMP endpoints
@@ -24,7 +24,7 @@ Built in Rust for performance and safety. Test how your services handle real-wor
 ### Prerequisites
 
 - **Rust 1.70+** - [Install Rust](https://www.rust-lang.org/tools/install)
-- **Windows**: No additional requirements
+- **Windows**: Native support with OS level process & resource handles
 - **Linux**: `iproute2`, `iptables` (usually pre-installed)
 - **macOS**: Built-in tools, requires sudo for network chaos
 
@@ -53,13 +53,38 @@ cargo build --release
 # Open http://127.0.0.1:8080
 ```
 
+## 📦 Chaos Injectors (20 Total)
+
+| Injector | Category | Description | Platform |
+|----------|----------|-------------|----------|
+| `network_latency` | Network | Adds delay to packets (mean + jitter) | All |
+| `packet_loss` | Network | Randomly drops network packets | All |
+| `tcp_reset` | Network | Terminates TCP connections | All |
+| `cpu_starvation` | System | Saturates CPU at specified intensity | All |
+| `memory_pressure` | System | Allocates memory to target % | All |
+| `disk_slow` | System | I/O latency injection | All |
+| `process_kill` | Process | Terminates/restarts processes | All |
+| `dns_fault` | Network | DNS delays, NXDOMAIN spoofing, blackholing | All |
+| `fd_exhaustion` | System | File descriptor leak simulation (`EMFILE`/`ENFILE`) | All |
+| `process_freeze` | Process | Execution pause (`SIGSTOP`/`SIGCONT` or OS suspend) | All |
+| `clock_skew` | System | Time drift injection for TLS, JWT, & consensus | All |
+| `disk_fill` | Storage | Ballast file allocation to trigger `ENOSPC` | All |
+| `socket_corrupt` | Network | Bit-flipping and payload corruption in flight | All |
+| `http_fault` | L7 Web | Synthetic 5xx, 429 rate limits, Slowloris | All |
+| `nginx_fault` | Reverse Proxy | Upstream resets, 502/504 timeouts, SSL drops | All |
+| `aws_fault` | Cloud | IMDS blackholing, S3 503, DynamoDB throttle, IAM drop | All |
+| `azure_fault` | Cloud | ARM 429 throttling, CosmosDB RU exhaustion, Key Vault 403 | All |
+| `cloudflare_fault` | Edge CDN | Cloudflare 520, 522/524 timeouts, Worker CPU, WAF 403 | All |
+| `media_streaming_fault` | Media | HLS segment latency, DASH tag drop, RTSP frame drop, WebRTC SDP delay | All |
+| `crypto_fault` | Security | TLS cert expiry, OCSP offline, entropy starvation | All |
+
 ## 🖥️ Web Dashboard
 
 Modern dark-themed web interface for chaos engineering:
 
 - **Dashboard**: Real-time test status, system overview
 - **Scenarios**: Browse and run YAML test scenarios
-- **Load Testing**: Stress test any HTTP/WebSocket/TCP endpoint
+- **Load Testing**: Stress test any HTTP/WebSocket/TCP/Media endpoint
 - **Targets**: Save and manage your test endpoints
 - **Results**: View test history with detailed metrics
 
@@ -84,22 +109,10 @@ Go to **Load Test** page and configure:
 - **HLS** - HTTP Live Streaming
 - **RTMP** - Video streaming servers
 
-## 📦 Chaos Injectors
-
-| Injector | Description | Platform |
-|----------|-------------|----------|
-| `network_latency` | Adds delay to packets (mean + jitter) | All |
-| `packet_loss` | Randomly drops packets | All |
-| `tcp_reset` | Terminates TCP connections | All |
-| `cpu_starvation` | Saturates CPU at specified intensity | All |
-| `memory_pressure` | Allocates memory to target % | All |
-| `disk_slow` | I/O latency injection | All |
-| `process_kill` | Terminates/restarts processes | All |
-
 ## 📝 Test Scenarios
 
 ```yaml
-name: "HTTP Service Resilience Test"
+name: "HTTP & Multi-Cloud Resilience Test"
 targets:
   - name: "web_api"
     type: "process"
@@ -109,22 +122,27 @@ phases:
   - name: "baseline"
     duration: "30s"
     
-  - name: "network_stress"
+  - name: "network_and_dns_stress"
     duration: "60s"
     injections:
       - type: "network_latency"
         target: "web_api"
         delay: "100ms"
         jitter: "20ms"
+      - type: "dns_fault"
+        domain_pattern: "*.api.internal"
+        failure_rate: 0.2
   
-  - name: "resource_stress"
+  - name: "cloud_and_proxy_faults"
     duration: "60s"
     parallel: true
     injections:
-      - type: "cpu_starvation"
-        intensity: 0.7
-      - type: "memory_pressure"
-        target_usage: 0.8
+      - type: "aws_fault"
+        service_fault: "S3SlowDown503"
+      - type: "azure_fault"
+        service_fault: "CosmosDbRuExhaustion"
+      - type: "cloudflare_fault"
+        error_code: "Error524TimeoutOccurred"
         
   - name: "recovery"
     duration: "30s"
@@ -171,7 +189,7 @@ Three example targets included:
 ```
 chaos-engineering-rs/
 ├── chaos_cli/         CLI and commands
-├── chaos_core/        Injection engine
+├── chaos_core/        Injection engine (20 fault types)
 ├── chaos_scenarios/   YAML parser, orchestration
 ├── chaos_targets/     Target discovery, test services
 ├── chaos_metrics/     Metrics collection, export
@@ -186,6 +204,9 @@ chaos-engineering-rs/
 | CPU/Memory/Disk Chaos | ✅ | ✅ | ✅ |
 | Process Control | ✅ | ✅ | ✅ |
 | Network Chaos | ✅ tc/netem | ✅ dnctl | ✅ app-level |
+| DNS / Socket / L7 Chaos | ✅ | ✅ | ✅ |
+| AWS / Azure / Cloudflare Chaos | ✅ | ✅ | ✅ |
+| Media & Crypto Chaos | ✅ | ✅ | ✅ |
 | Web Dashboard | ✅ | ✅ | ✅ |
 | Load Testing | ✅ | ✅ | ✅ |
 
