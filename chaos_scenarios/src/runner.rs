@@ -1,5 +1,6 @@
 use crate::{
     config::{InjectionConfig, Scenario},
+    injector_factory::build_injector,
     scheduler::{Scheduler, SchedulingMode},
 };
 use chaos_core::{Executor, InjectionHandle};
@@ -148,11 +149,11 @@ impl ScenarioRunner {
             .to_target()
             .map_err(|e| anyhow::anyhow!("Invalid target: {}", e))?;
 
-        let handle = self
-            .executor
-            .inject(&injection.r#type, &target)
-            .await
-            .map_err(|e| anyhow::anyhow!("Injection failed: {}", e))?;
+        let handle = match build_injector(injection)? {
+            Some(injector) => self.executor.inject_with(injector, &target).await,
+            None => self.executor.inject(&injection.r#type, &target).await,
+        }
+        .map_err(|e| anyhow::anyhow!("Injection failed: {}", e))?;
 
         Ok(handle)
     }

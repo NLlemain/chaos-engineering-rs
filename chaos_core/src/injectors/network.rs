@@ -486,6 +486,10 @@ impl PacketLossInjector {
         }
     }
 
+    pub fn from_config(config: PacketLossConfig) -> Self {
+        Self { config }
+    }
+
     #[cfg(target_os = "linux")]
     async fn inject_linux(&self, target: &Target) -> Result<InjectionHandle> {
         let interface = self.get_interface_for_target(target).await?;

@@ -1,4 +1,5 @@
 pub mod config;
+pub mod injector_factory;
 pub mod parser;
 pub mod phase;
 pub mod runner;

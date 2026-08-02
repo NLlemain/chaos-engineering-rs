@@ -1,5 +1,6 @@
 use crate::{error::*, handle::InjectionHandle, injectors::Injector, target::Target};
 use async_trait::async_trait;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -102,6 +103,14 @@ impl MemoryPressureInjector {
 #[async_trait]
 impl Injector for MemoryPressureInjector {
     async fn inject(&self, target: &Target) -> Result<InjectionHandle> {
+        let failure_rate = self.config.failure_rate.clamp(0.0, 1.0);
+        if failure_rate > 0.0 && rand::thread_rng().gen_bool(failure_rate) {
+            return Err(ChaosError::InjectionFailed(format!(
+                "Simulated memory allocation failure (rate: {:.2})",
+                failure_rate
+            )));
+        }
+
         let bytes_to_allocate = self.calculate_bytes_to_allocate().await?;
 
         if bytes_to_allocate > 0 {
@@ -129,6 +138,17 @@ impl Injector for MemoryPressureInjector {
 
     fn name(&self) -> &str {
         "memory_pressure"
+    }
+
+    async fn validate(&self) -> Result<()> {
+        if !(0.0..=1.0).contains(&self.config.target_usage)
+            || !(0.0..=1.0).contains(&self.config.failure_rate)
+        {
+            return Err(ChaosError::InvalidConfig(
+                "Memory target_usage and failure_rate must be between 0.0 and 1.0".to_string(),
+            ));
+        }
+        Ok(())
     }
 }
 
