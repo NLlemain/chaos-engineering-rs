@@ -52,22 +52,10 @@ impl AzureFaultInjector {
 
 #[async_trait]
 impl Injector for AzureFaultInjector {
-    async fn inject(&self, target: &Target) -> Result<InjectionHandle> {
-        info!(
-            "Injecting Azure Fault {:?} for resource group '{}' (rate: {})",
-            self.config.service_fault, self.config.resource_group, self.config.rate
-        );
-
-        let metadata = serde_json::json!({
-            "service_fault": format!("{:?}", self.config.service_fault),
-            "resource_group": self.config.resource_group,
-            "rate": self.config.rate,
-        });
-
-        Ok(InjectionHandle::new(
-            "azure_fault",
-            target.clone(),
-            metadata,
+    async fn inject(&self, _target: &Target) -> Result<InjectionHandle> {
+        Err(ChaosError::InvalidConfig(
+            "azure_fault is planned; use Azure Chaos Studio until the adapter is implemented"
+                .into(),
         ))
     }
 
@@ -81,6 +69,10 @@ impl Injector for AzureFaultInjector {
 
     fn name(&self) -> &str {
         "azure_fault"
+    }
+
+    fn status(&self) -> crate::injectors::InjectorStatus {
+        crate::injectors::InjectorStatus::Planned
     }
 }
 
@@ -134,8 +126,6 @@ mod tests {
 
         assert_eq!(injector.config.resource_group, "rg-core");
         let target = Target::System;
-        let handle = injector.inject(&target).await.unwrap();
-        assert_eq!(handle.injector_name, "azure_fault");
-        injector.remove(handle).await.unwrap();
+        assert!(injector.inject(&target).await.is_err());
     }
 }

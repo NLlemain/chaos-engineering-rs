@@ -19,7 +19,33 @@ pub mod socket_corrupt;
 
 use crate::{error::Result, handle::InjectionHandle, target::Target};
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum InjectorStatus {
+    Stable,
+    Experimental,
+    Planned,
+}
+
+impl std::fmt::Display for InjectorStatus {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(match self {
+            Self::Stable => "stable",
+            Self::Experimental => "experimental",
+            Self::Planned => "planned",
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct InjectorInfo {
+    pub name: String,
+    pub status: InjectorStatus,
+    pub required_capabilities: Vec<String>,
+}
 
 pub use aws_fault::*;
 pub use azure_fault::*;
@@ -51,6 +77,11 @@ pub trait Injector: Send + Sync {
 
     /// Get the name of this injector
     fn name(&self) -> &str;
+
+    /// Report whether this injector is ready for real experiments.
+    fn status(&self) -> InjectorStatus {
+        InjectorStatus::Stable
+    }
 
     /// Validate the injector can run on this system
     async fn validate(&self) -> Result<()> {
@@ -84,7 +115,23 @@ impl InjectorRegistry {
     }
 
     pub fn list(&self) -> Vec<String> {
-        self.injectors.keys().cloned().collect()
+        let mut names: Vec<_> = self.injectors.keys().cloned().collect();
+        names.sort();
+        names
+    }
+
+    pub fn list_info(&self) -> Vec<InjectorInfo> {
+        let mut injectors: Vec<_> = self
+            .injectors
+            .values()
+            .map(|injector| InjectorInfo {
+                name: injector.name().to_string(),
+                status: injector.status(),
+                required_capabilities: injector.required_capabilities(),
+            })
+            .collect();
+        injectors.sort_by(|left, right| left.name.cmp(&right.name));
+        injectors
     }
 
     pub fn with_defaults() -> Self {

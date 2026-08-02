@@ -1,7 +1,7 @@
 use crate::{
     error::Result,
     handle::{InjectionHandle, InjectionState},
-    injectors::{DynInjector, InjectorRegistry},
+    injectors::{DynInjector, InjectorInfo, InjectorRegistry, InjectorStatus},
     target::Target,
 };
 use std::collections::HashMap;
@@ -49,6 +49,12 @@ impl Executor {
         injector: DynInjector,
         target: &Target,
     ) -> Result<InjectionHandle> {
+        if injector.status() == InjectorStatus::Planned {
+            return Err(crate::error::ChaosError::InvalidConfig(format!(
+                "Injector '{}' is planned but not implemented yet",
+                injector.name()
+            )));
+        }
         injector.validate().await?;
 
         info!(
@@ -134,6 +140,10 @@ impl Executor {
 
     pub fn list_injectors(&self) -> Vec<String> {
         self.registry.list()
+    }
+
+    pub fn list_injector_info(&self) -> Vec<InjectorInfo> {
+        self.registry.list_info()
     }
 }
 

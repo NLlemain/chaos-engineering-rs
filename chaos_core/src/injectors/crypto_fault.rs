@@ -49,21 +49,9 @@ impl CryptoFaultInjector {
 
 #[async_trait]
 impl Injector for CryptoFaultInjector {
-    async fn inject(&self, target: &Target) -> Result<InjectionHandle> {
-        info!(
-            "Injecting Cryptographic & Security Fault {:?} for domain '{}' on target {:?}",
-            self.config.fault_type, self.config.target_cert_domain, target
-        );
-
-        let metadata = serde_json::json!({
-            "fault_type": format!("{:?}", self.config.fault_type),
-            "domain": self.config.target_cert_domain,
-        });
-
-        Ok(InjectionHandle::new(
-            "crypto_fault",
-            target.clone(),
-            metadata,
+    async fn inject(&self, _target: &Target) -> Result<InjectionHandle> {
+        Err(ChaosError::InvalidConfig(
+            "crypto_fault is planned; no certificate or entropy fault was applied".into(),
         ))
     }
 
@@ -77,6 +65,10 @@ impl Injector for CryptoFaultInjector {
 
     fn name(&self) -> &str {
         "crypto_fault"
+    }
+
+    fn status(&self) -> crate::injectors::InjectorStatus {
+        crate::injectors::InjectorStatus::Planned
     }
 }
 
@@ -120,8 +112,6 @@ mod tests {
 
         assert_eq!(injector.config.target_cert_domain, "auth.service");
         let target = Target::System;
-        let handle = injector.inject(&target).await.unwrap();
-        assert_eq!(handle.injector_name, "crypto_fault");
-        injector.remove(handle).await.unwrap();
+        assert!(injector.inject(&target).await.is_err());
     }
 }

@@ -49,18 +49,10 @@ impl AwsFaultInjector {
 
 #[async_trait]
 impl Injector for AwsFaultInjector {
-    async fn inject(&self, target: &Target) -> Result<InjectionHandle> {
-        info!(
-            "Injecting AWS Cloud Fault {:?} (rate: {}) for target {:?}",
-            self.config.service_fault, self.config.rate, target
-        );
-
-        let metadata = serde_json::json!({
-            "service_fault": format!("{:?}", self.config.service_fault),
-            "rate": self.config.rate,
-        });
-
-        Ok(InjectionHandle::new("aws_fault", target.clone(), metadata))
+    async fn inject(&self, _target: &Target) -> Result<InjectionHandle> {
+        Err(ChaosError::InvalidConfig(
+            "aws_fault is planned; use AWS FIS directly until the adapter is implemented".into(),
+        ))
     }
 
     async fn remove(&self, _handle: InjectionHandle) -> Result<()> {
@@ -73,6 +65,10 @@ impl Injector for AwsFaultInjector {
 
     fn name(&self) -> &str {
         "aws_fault"
+    }
+
+    fn status(&self) -> crate::injectors::InjectorStatus {
+        crate::injectors::InjectorStatus::Planned
     }
 }
 
@@ -114,8 +110,6 @@ mod tests {
 
         assert_eq!(injector.config.rate, 0.9);
         let target = Target::System;
-        let handle = injector.inject(&target).await.unwrap();
-        assert_eq!(handle.injector_name, "aws_fault");
-        injector.remove(handle).await.unwrap();
+        assert!(injector.inject(&target).await.is_err());
     }
 }

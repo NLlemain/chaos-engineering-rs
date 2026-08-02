@@ -1,17 +1,27 @@
 use anyhow::Result;
-use chaos_core::Executor;
+use chaos_core::{Executor, InjectorStatus};
 use colored::Colorize;
 
 pub async fn execute() -> Result<()> {
     println!("{}", "=== Available Injectors ===".bold().cyan());
 
     let executor = Executor::with_defaults();
-    let injectors = executor.list_injectors();
+    let injectors = executor.list_injector_info();
 
     println!("\nTotal injectors: {}\n", injectors.len());
 
     for injector in injectors {
-        println!("  {} {}", "•".green(), injector);
+        let status = match injector.status {
+            InjectorStatus::Stable => injector.status.to_string().green(),
+            InjectorStatus::Experimental => injector.status.to_string().yellow(),
+            InjectorStatus::Planned => injector.status.to_string().dimmed(),
+        };
+        let capabilities = if injector.required_capabilities.is_empty() {
+            String::new()
+        } else {
+            format!(" [{}]", injector.required_capabilities.join(", "))
+        };
+        println!("  {:<28} {:<12}{}", injector.name, status, capabilities);
     }
 
     println!(

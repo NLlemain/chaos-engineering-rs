@@ -54,19 +54,10 @@ impl HttpFaultInjector {
 
 #[async_trait]
 impl Injector for HttpFaultInjector {
-    async fn inject(&self, target: &Target) -> Result<InjectionHandle> {
-        info!(
-            "Injecting HTTP Fault on path pattern '{}' with type {:?} (rate: {})",
-            self.config.path_pattern, self.config.fault_type, self.config.rate
-        );
-
-        let metadata = serde_json::json!({
-            "path_pattern": self.config.path_pattern,
-            "fault_type": format!("{:?}", self.config.fault_type),
-            "rate": self.config.rate,
-        });
-
-        Ok(InjectionHandle::new("http_fault", target.clone(), metadata))
+    async fn inject(&self, _target: &Target) -> Result<InjectionHandle> {
+        Err(ChaosError::InvalidConfig(
+            "http_fault is planned; no HTTP proxy was started".into(),
+        ))
     }
 
     async fn remove(&self, _handle: InjectionHandle) -> Result<()> {
@@ -79,6 +70,10 @@ impl Injector for HttpFaultInjector {
 
     fn name(&self) -> &str {
         "http_fault"
+    }
+
+    fn status(&self) -> crate::injectors::InjectorStatus {
+        crate::injectors::InjectorStatus::Planned
     }
 }
 

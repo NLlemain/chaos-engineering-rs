@@ -48,18 +48,11 @@ impl ClockSkewInjector {
 
 #[async_trait]
 impl Injector for ClockSkewInjector {
-    async fn inject(&self, target: &Target) -> Result<InjectionHandle> {
-        info!(
-            "Injecting Clock Skew offset {:?} ({:?}) for target {:?}",
-            self.config.offset, self.config.direction, target
-        );
-
-        let metadata = serde_json::json!({
-            "offset_secs": self.config.offset.as_secs(),
-            "direction": format!("{:?}", self.config.direction),
-        });
-
-        Ok(InjectionHandle::new("clock_skew", target.clone(), metadata))
+    async fn inject(&self, _target: &Target) -> Result<InjectionHandle> {
+        Err(ChaosError::InvalidConfig(format!(
+            "clock_skew is planned and did not apply the requested {:?} offset",
+            self.config.offset
+        )))
     }
 
     async fn remove(&self, _handle: InjectionHandle) -> Result<()> {
@@ -69,6 +62,10 @@ impl Injector for ClockSkewInjector {
 
     fn name(&self) -> &str {
         "clock_skew"
+    }
+
+    fn status(&self) -> crate::injectors::InjectorStatus {
+        crate::injectors::InjectorStatus::Planned
     }
 
     fn required_capabilities(&self) -> Vec<String> {
@@ -114,8 +111,6 @@ mod tests {
 
         assert_eq!(injector.config.offset, Duration::from_secs(300));
         let target = Target::System;
-        let handle = injector.inject(&target).await.unwrap();
-        assert_eq!(handle.injector_name, "clock_skew");
-        injector.remove(handle).await.unwrap();
+        assert!(injector.inject(&target).await.is_err());
     }
 }

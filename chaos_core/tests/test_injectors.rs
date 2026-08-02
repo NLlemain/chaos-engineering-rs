@@ -1,4 +1,4 @@
-use chaos_core::{InjectorRegistry, Target};
+use chaos_core::{Executor, InjectorRegistry, InjectorStatus, Target};
 
 #[tokio::test]
 async fn test_registry_contains_all_20_chaos_types() {
@@ -45,28 +45,31 @@ async fn test_registry_contains_all_20_chaos_types() {
 }
 
 #[tokio::test]
-async fn test_all_20_injectors_lifecycle() {
+async fn test_registered_injectors_report_honest_status() {
     let registry = InjectorRegistry::with_defaults();
-    let target = Target::System;
+    let info = registry.list_info();
 
-    let names = registry.list();
-    for name in names {
-        let injector = registry.get(&name).unwrap();
-        assert_eq!(injector.name(), name);
+    assert_eq!(
+        info.iter()
+            .filter(|injector| injector.status == InjectorStatus::Stable)
+            .count(),
+        10
+    );
+    assert_eq!(
+        info.iter()
+            .filter(|injector| injector.status == InjectorStatus::Planned)
+            .count(),
+        10
+    );
+}
 
-        assert!(injector.validate().await.is_ok());
+#[tokio::test]
+async fn test_planned_injector_cannot_report_success() {
+    let executor = Executor::with_defaults();
+    let error = executor
+        .inject("aws_fault", &Target::System)
+        .await
+        .expect_err("planned injector should be rejected");
 
-        if name != "process_kill" && name != "process_freeze" {
-            if let Ok(handle) = injector.inject(&target).await {
-                assert_eq!(handle.injector_name, name);
-                let remove_res = injector.remove(handle).await;
-                assert!(
-                    remove_res.is_ok(),
-                    "Removing injector '{}' failed: {:?}",
-                    name,
-                    remove_res.err()
-                );
-            }
-        }
-    }
+    assert!(error.to_string().contains("planned but not implemented"));
 }

@@ -53,22 +53,10 @@ impl DnsFaultInjector {
 
 #[async_trait]
 impl Injector for DnsFaultInjector {
-    async fn inject(&self, target: &Target) -> Result<InjectionHandle> {
-        info!(
-            "Injecting DNS fault on pattern '{}' mode {:?} (failure rate: {}%) for target {:?}",
-            self.config.domain_pattern,
-            self.config.fault_mode,
-            self.config.failure_rate * 100.0,
-            target
-        );
-
-        let metadata = serde_json::json!({
-            "domain_pattern": self.config.domain_pattern,
-            "fault_mode": format!("{:?}", self.config.fault_mode),
-            "failure_rate": self.config.failure_rate,
-        });
-
-        Ok(InjectionHandle::new("dns_fault", target.clone(), metadata))
+    async fn inject(&self, _target: &Target) -> Result<InjectionHandle> {
+        Err(ChaosError::InvalidConfig(
+            "dns_fault is planned; no DNS proxy was started".into(),
+        ))
     }
 
     async fn remove(&self, _handle: InjectionHandle) -> Result<()> {
@@ -81,6 +69,10 @@ impl Injector for DnsFaultInjector {
 
     fn name(&self) -> &str {
         "dns_fault"
+    }
+
+    fn status(&self) -> crate::injectors::InjectorStatus {
+        crate::injectors::InjectorStatus::Planned
     }
 
     fn required_capabilities(&self) -> Vec<String> {

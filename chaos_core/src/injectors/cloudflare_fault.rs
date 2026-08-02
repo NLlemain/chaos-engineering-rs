@@ -51,22 +51,9 @@ impl CloudflareFaultInjector {
 
 #[async_trait]
 impl Injector for CloudflareFaultInjector {
-    async fn inject(&self, target: &Target) -> Result<InjectionHandle> {
-        info!(
-            "Injecting Cloudflare Edge Fault {:?} on zone '{}' (rate: {})",
-            self.config.error_code, self.config.zone_name, self.config.rate
-        );
-
-        let metadata = serde_json::json!({
-            "error_code": format!("{:?}", self.config.error_code),
-            "zone_name": self.config.zone_name,
-            "rate": self.config.rate,
-        });
-
-        Ok(InjectionHandle::new(
-            "cloudflare_fault",
-            target.clone(),
-            metadata,
+    async fn inject(&self, _target: &Target) -> Result<InjectionHandle> {
+        Err(ChaosError::InvalidConfig(
+            "cloudflare_fault is planned and does not modify edge traffic yet".into(),
         ))
     }
 
@@ -80,6 +67,10 @@ impl Injector for CloudflareFaultInjector {
 
     fn name(&self) -> &str {
         "cloudflare_fault"
+    }
+
+    fn status(&self) -> crate::injectors::InjectorStatus {
+        crate::injectors::InjectorStatus::Planned
     }
 }
 
@@ -131,8 +122,6 @@ mod tests {
 
         assert_eq!(injector.config.zone_name, "video.cdn.com");
         let target = Target::System;
-        let handle = injector.inject(&target).await.unwrap();
-        assert_eq!(handle.injector_name, "cloudflare_fault");
-        injector.remove(handle).await.unwrap();
+        assert!(injector.inject(&target).await.is_err());
     }
 }

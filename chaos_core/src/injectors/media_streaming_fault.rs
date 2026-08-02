@@ -52,21 +52,9 @@ impl MediaStreamingFaultInjector {
 
 #[async_trait]
 impl Injector for MediaStreamingFaultInjector {
-    async fn inject(&self, target: &Target) -> Result<InjectionHandle> {
-        info!(
-            "Injecting Video Streaming Fault {:?} on stream '{}' for target {:?}",
-            self.config.fault_type, self.config.stream_id, target
-        );
-
-        let metadata = serde_json::json!({
-            "fault_type": format!("{:?}", self.config.fault_type),
-            "stream_id": self.config.stream_id,
-        });
-
-        Ok(InjectionHandle::new(
-            "media_streaming_fault",
-            target.clone(),
-            metadata,
+    async fn inject(&self, _target: &Target) -> Result<InjectionHandle> {
+        Err(ChaosError::InvalidConfig(
+            "media_streaming_fault is planned; no stream traffic was modified".into(),
         ))
     }
 
@@ -80,6 +68,10 @@ impl Injector for MediaStreamingFaultInjector {
 
     fn name(&self) -> &str {
         "media_streaming_fault"
+    }
+
+    fn status(&self) -> crate::injectors::InjectorStatus {
+        crate::injectors::InjectorStatus::Planned
     }
 }
 
@@ -125,8 +117,6 @@ mod tests {
 
         assert_eq!(injector.config.stream_id, "cam_north_01");
         let target = Target::System;
-        let handle = injector.inject(&target).await.unwrap();
-        assert_eq!(handle.injector_name, "media_streaming_fault");
-        injector.remove(handle).await.unwrap();
+        assert!(injector.inject(&target).await.is_err());
     }
 }

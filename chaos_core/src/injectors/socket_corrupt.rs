@@ -81,22 +81,9 @@ impl SocketCorruptInjector {
 
 #[async_trait]
 impl Injector for SocketCorruptInjector {
-    async fn inject(&self, target: &Target) -> Result<InjectionHandle> {
-        info!(
-            "Injecting Socket Payload Corruption on port {} with mode {:?}",
-            self.config.port, self.config.corruption_mode
-        );
-
-        let metadata = serde_json::json!({
-            "port": self.config.port,
-            "mode": format!("{:?}", self.config.corruption_mode),
-            "rate": self.config.corruption_rate,
-        });
-
-        Ok(InjectionHandle::new(
-            "socket_corrupt",
-            target.clone(),
-            metadata,
+    async fn inject(&self, _target: &Target) -> Result<InjectionHandle> {
+        Err(ChaosError::InvalidConfig(
+            "socket_corrupt is planned; no socket proxy was started".into(),
         ))
     }
 
@@ -110,6 +97,10 @@ impl Injector for SocketCorruptInjector {
 
     fn name(&self) -> &str {
         "socket_corrupt"
+    }
+
+    fn status(&self) -> crate::injectors::InjectorStatus {
+        crate::injectors::InjectorStatus::Planned
     }
 
     fn required_capabilities(&self) -> Vec<String> {

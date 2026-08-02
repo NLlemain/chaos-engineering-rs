@@ -31,7 +31,7 @@ A lightweight, cross-platform chaos engineering framework built in Rust for test
 
 ### Alternative Short Description (more casual)
 ```
-🦀 Test your services by breaking them on purpose. Cross-platform chaos engineering in Rust with 7 injector types, YAML configs, and multi-format reporting. Find bugs before production does.
+Test services by breaking them on purpose. Cross-platform chaos engineering in Rust with an honest capability registry, YAML scenarios, and multi-format reporting.
 ```
 
 ### Topics/Tags (for GitHub)

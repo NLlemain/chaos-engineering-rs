@@ -13,7 +13,7 @@ Built in Rust for performance and safety. Test how your services handle real-wor
 
 - **🌐 Cross-Platform**: Windows, macOS, Linux with platform-native chaos injection and graceful cross-platform fallback
 - **⚡ High Performance**: Async Rust, ~15MB memory, <1% CPU overhead
-- **🎯 20 Chaos Types**: Network latency, packet loss, TCP resets, CPU starvation, memory pressure, disk I/O, process kills, DNS faults, FD exhaustion, process freeze, clock skew, disk space fill, socket payload corruption, HTTP/L7 faults, Nginx proxy faults, AWS cloud faults, Azure cloud faults, Cloudflare edge faults, media streaming faults, crypto/security faults
+- **🎯 Honest Capability Registry**: 20 discoverable chaos types with operational and planned status shown directly by `chaos list`
 - **📋 YAML Configuration**: Declarative test scenarios with multi-phase support
 - **🖥️ Web Dashboard**: Dark-themed UI for test management and monitoring
 - **🔥 Load Testing**: Rate-limited concurrent load tests for HTTP/HTTPS APIs and HLS manifests
@@ -32,7 +32,7 @@ Built in Rust for performance and safety. Test how your services handle real-wor
 ### Installation
 
 ```bash
-git clone https://github.com/NLlemain/chaos-engineering-rs
+git clone https://github.com/Ninian-Lemain/chaos-engineering-rs
 cd chaos-engineering-rs
 cargo build --release
 ```
@@ -56,28 +56,28 @@ cargo build --release
 
 ## 📦 Chaos Injectors (20 Total)
 
-| Injector | Category | Description | Platform |
-|----------|----------|-------------|----------|
-| `network_latency` | Network | Adds delay to packets (mean + jitter) | All |
-| `packet_loss` | Network | Randomly drops network packets | All |
-| `tcp_reset` | Network | Terminates TCP connections | All |
-| `cpu_starvation` | System | Saturates CPU at specified intensity | All |
-| `memory_pressure` | System | Allocates memory to target % | All |
-| `disk_slow` | System | I/O latency injection | All |
-| `process_kill` | Process | Terminates/restarts processes | All |
-| `dns_fault` | Network | DNS delays, NXDOMAIN spoofing, blackholing | All |
-| `fd_exhaustion` | System | File descriptor leak simulation (`EMFILE`/`ENFILE`) | All |
-| `process_freeze` | Process | Execution pause (`SIGSTOP`/`SIGCONT` or OS suspend) | All |
-| `clock_skew` | System | Time drift injection for TLS, JWT, & consensus | All |
-| `disk_fill` | Storage | Ballast file allocation to trigger `ENOSPC` | All |
-| `socket_corrupt` | Network | Bit-flipping and payload corruption in flight | All |
-| `http_fault` | L7 Web | Synthetic 5xx, 429 rate limits, Slowloris | All |
-| `nginx_fault` | Reverse Proxy | Upstream resets, 502/504 timeouts, SSL drops | All |
-| `aws_fault` | Cloud | IMDS blackholing, S3 503, DynamoDB throttle, IAM drop | All |
-| `azure_fault` | Cloud | ARM 429 throttling, CosmosDB RU exhaustion, Key Vault 403 | All |
-| `cloudflare_fault` | Edge CDN | Cloudflare 520, 522/524 timeouts, Worker CPU, WAF 403 | All |
-| `media_streaming_fault` | Media | HLS segment latency, DASH tag drop, RTSP frame drop, WebRTC SDP delay | All |
-| `crypto_fault` | Security | TLS cert expiry, OCSP offline, entropy starvation | All |
+| Injector | Category | Description | Status |
+|----------|----------|-------------|--------|
+| `network_latency` | Network | Adds delay to packets (mean + jitter) | Operational |
+| `packet_loss` | Network | Randomly drops network packets | Operational |
+| `tcp_reset` | Network | Terminates TCP connections | Operational |
+| `cpu_starvation` | System | Saturates CPU at specified intensity | Operational |
+| `memory_pressure` | System | Allocates memory to target % | Operational |
+| `disk_slow` | System | I/O latency injection | Operational |
+| `process_kill` | Process | Terminates/restarts processes | Operational |
+| `fd_exhaustion` | System | File descriptor leak simulation (`EMFILE`/`ENFILE`) | Operational |
+| `process_freeze` | Process | Execution pause or OS suspend | Operational |
+| `disk_fill` | Storage | Ballast file allocation to trigger `ENOSPC` | Operational |
+| `dns_fault` | Network | DNS delays, NXDOMAIN spoofing, blackholing | Planned |
+| `clock_skew` | System | Time drift injection for TLS, JWT, and consensus | Planned |
+| `socket_corrupt` | Network | Bit-flipping and payload corruption in flight | Planned |
+| `http_fault` | L7 Web | Synthetic 5xx, 429 rate limits, Slowloris | Planned |
+| `nginx_fault` | Reverse Proxy | Upstream resets, 502/504 timeouts, SSL drops | Planned |
+| `aws_fault` | Cloud | IMDS blackholing, S3 503, DynamoDB throttle, IAM drop | Planned |
+| `azure_fault` | Cloud | ARM 429 throttling, CosmosDB RU exhaustion, Key Vault 403 | Planned |
+| `cloudflare_fault` | Edge CDN | Cloudflare 520, 522/524 timeouts, Worker CPU, WAF 403 | Planned |
+| `media_streaming_fault` | Media | HLS, DASH, RTSP, and WebRTC disruptions | Planned |
+| `crypto_fault` | Security | TLS certificate, OCSP, signature, and entropy faults | Planned |
 
 ## 🖥️ Web Dashboard
 

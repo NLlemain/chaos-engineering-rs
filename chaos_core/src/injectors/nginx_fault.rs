@@ -50,21 +50,9 @@ impl NginxFaultInjector {
 
 #[async_trait]
 impl Injector for NginxFaultInjector {
-    async fn inject(&self, target: &Target) -> Result<InjectionHandle> {
-        info!(
-            "Injecting Nginx Fault mode {:?} on upstream '{}' for target {:?}",
-            self.config.fault_mode, self.config.upstream_name, target
-        );
-
-        let metadata = serde_json::json!({
-            "upstream_name": self.config.upstream_name,
-            "fault_mode": format!("{:?}", self.config.fault_mode),
-        });
-
-        Ok(InjectionHandle::new(
-            "nginx_fault",
-            target.clone(),
-            metadata,
+    async fn inject(&self, _target: &Target) -> Result<InjectionHandle> {
+        Err(ChaosError::InvalidConfig(
+            "nginx_fault is planned and does not modify Nginx configuration yet".into(),
         ))
     }
 
@@ -78,6 +66,10 @@ impl Injector for NginxFaultInjector {
 
     fn name(&self) -> &str {
         "nginx_fault"
+    }
+
+    fn status(&self) -> crate::injectors::InjectorStatus {
+        crate::injectors::InjectorStatus::Planned
     }
 }
 
@@ -119,8 +111,6 @@ mod tests {
 
         assert_eq!(injector.config.upstream_name, "payment_service");
         let target = Target::System;
-        let handle = injector.inject(&target).await.unwrap();
-        assert_eq!(handle.injector_name, "nginx_fault");
-        injector.remove(handle).await.unwrap();
+        assert!(injector.inject(&target).await.is_err());
     }
 }

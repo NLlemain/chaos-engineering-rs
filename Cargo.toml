@@ -12,9 +12,9 @@ resolver = "2"
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-authors = ["NLlemain"]
+authors = ["Ninian-Lemain"]
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/NLlemain/chaos-engineering-rs"
+repository = "https://github.com/Ninian-Lemain/chaos-engineering-rs"
 
 [workspace.dependencies]
 # Async runtime
