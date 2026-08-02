@@ -90,7 +90,7 @@ impl NetworkLatencyInjector {
 
         // Use tc (traffic control) with netem
         let output = Command::new("tc")
-            .args(&[
+            .args([
                 "qdisc",
                 "add",
                 "dev",
@@ -218,7 +218,7 @@ impl NetworkLatencyInjector {
         // First create a pipe
         let pipe_num = 1;
         let output = Command::new("sudo")
-            .args(&[
+            .args([
                 "dnctl",
                 "pipe",
                 &pipe_num.to_string(),
@@ -236,9 +236,9 @@ impl NetworkLatencyInjector {
         }
 
         // Add pfctl rule to use the pipe
-        let pfctl_rule = format!("dummynet out proto tcp from any to any pipe {}", pipe_num);
+        let _pfctl_rule = format!("dummynet out proto tcp from any to any pipe {}", pipe_num);
         let output = Command::new("sudo")
-            .args(&["pfctl", "-a", "chaos", "-f", "-"])
+            .args(["pfctl", "-a", "chaos", "-f", "-"])
             .output()
             .await
             .map_err(|e| ChaosError::InjectionFailed(format!("Failed to run pfctl: {}", e)))?;
@@ -293,7 +293,7 @@ impl NetworkLatencyInjector {
         info!("Removing network latency from {}", interface);
 
         let output = Command::new("tc")
-            .args(&["qdisc", "del", "dev", interface, "root"])
+            .args(["qdisc", "del", "dev", interface, "root"])
             .output()
             .await
             .map_err(|e| ChaosError::CleanupFailed(format!("Failed to run tc: {}", e)))?;
@@ -349,13 +349,13 @@ impl NetworkLatencyInjector {
 
         // Remove pfctl rules
         let _output = Command::new("sudo")
-            .args(&["pfctl", "-a", "chaos", "-F", "all"])
+            .args(["pfctl", "-a", "chaos", "-F", "all"])
             .output()
             .await;
 
         // Remove dummynet pipe
         let _output = Command::new("sudo")
-            .args(&["dnctl", "pipe", &pipe_num.to_string(), "delete"])
+            .args(["dnctl", "pipe", &pipe_num.to_string(), "delete"])
             .output()
             .await;
 
@@ -484,7 +484,7 @@ impl PacketLossInjector {
         );
 
         let output = Command::new("tc")
-            .args(&[
+            .args([
                 "qdisc",
                 "add",
                 "dev",
@@ -551,7 +551,7 @@ impl PacketLossInjector {
         // macOS: Use dnctl with loss parameter
         let pipe_num = 2; // Different pipe from latency
         let output = Command::new("sudo")
-            .args(&[
+            .args([
                 "dnctl",
                 "pipe",
                 &pipe_num.to_string(),
@@ -614,7 +614,7 @@ impl Injector for PacketLossInjector {
             info!("Removing packet loss from {}", interface);
 
             let output = Command::new("tc")
-                .args(&["qdisc", "del", "dev", interface, "root"])
+                .args(["qdisc", "del", "dev", interface, "root"])
                 .output()
                 .await
                 .map_err(|e| ChaosError::CleanupFailed(format!("Failed to run tc: {}", e)))?;
@@ -641,7 +641,7 @@ impl Injector for PacketLossInjector {
             info!("Removing packet loss from macOS (pipe {})", pipe_num);
 
             let _output = Command::new("sudo")
-                .args(&["dnctl", "pipe", &pipe_num.to_string(), "delete"])
+                .args(["dnctl", "pipe", &pipe_num.to_string(), "delete"])
                 .output()
                 .await;
         }
@@ -689,7 +689,7 @@ impl TcpResetInjector {
         // Use iptables to inject RST packets
         let port = address.port();
         let output = Command::new("iptables")
-            .args(&[
+            .args([
                 "-A",
                 "OUTPUT",
                 "-p",
@@ -760,7 +760,7 @@ impl TcpResetInjector {
         // macOS: Use pfctl to block/reset TCP connections
         // Note: pfctl rules would be configured here
         let _output = Command::new("sudo")
-            .args(&["pfctl", "-a", "chaos", "-f", "-"])
+            .args(["pfctl", "-a", "chaos", "-f", "-"])
             .output()
             .await;
 
@@ -799,7 +799,7 @@ impl Injector for TcpResetInjector {
             info!("Removing TCP reset rule for port {}", port);
 
             let output = Command::new("iptables")
-                .args(&[
+                .args([
                     "-D",
                     "OUTPUT",
                     "-p",
@@ -830,7 +830,7 @@ impl Injector for TcpResetInjector {
         {
             info!("Removing TCP reset rules on macOS");
             let _output = Command::new("sudo")
-                .args(&["pfctl", "-a", "chaos", "-F", "all"])
+                .args(["pfctl", "-a", "chaos", "-F", "all"])
                 .output()
                 .await;
         }
