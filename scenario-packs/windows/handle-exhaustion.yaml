@@ -1,0 +1,15 @@
+name: windows_handle_exhaustion
+description: Open and hold thousands of exclusive temporary file handles, then remove every artifact.
+duration: 1m
+labels:
+  pack: windows
+  fault: handle-exhaustion
+phases:
+  - name: handle_pressure
+    duration: 1m
+    injections:
+      - type: windows_fault
+        target:
+          system: true
+        mode: handle_exhaustion
+        count: 4096

@@ -363,6 +363,50 @@
       "requirements": ["Point the storage client at the local proxy"],
       "file": "scenario-packs/object-storage/corrupt-download.yaml",
       "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/object-storage/corrupt-download.yaml"
+    },
+    {
+      "id": "windows-service-outage",
+      "title": "Windows service outage",
+      "category": "windows",
+      "status": "experimental",
+      "description": "Stop a Windows service and restore it only when it was originally running.",
+      "protocols": ["Windows Service Control Manager"],
+      "requirements": ["Windows", "Administrator"],
+      "file": "scenario-packs/windows/service-outage.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/windows/service-outage.yaml"
+    },
+    {
+      "id": "windows-locked-file",
+      "title": "Windows locked file",
+      "category": "windows",
+      "status": "experimental",
+      "description": "Hold an exclusive file handle and verify competing opens fail.",
+      "protocols": ["Win32 file sharing"],
+      "requirements": ["Windows", "Disposable file"],
+      "file": "scenario-packs/windows/locked-file.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/windows/locked-file.yaml"
+    },
+    {
+      "id": "windows-handle-exhaustion",
+      "title": "Windows handle exhaustion",
+      "category": "windows",
+      "status": "experimental",
+      "description": "Open measurable exclusive file handles and remove every temporary artifact on recovery.",
+      "protocols": ["Win32 handles"],
+      "requirements": ["Windows"],
+      "file": "scenario-packs/windows/handle-exhaustion.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/windows/handle-exhaustion.yaml"
+    },
+    {
+      "id": "windows-named-pipe-blackhole",
+      "title": "Windows named-pipe blackhole",
+      "category": "windows",
+      "status": "experimental",
+      "description": "Accept a named-pipe client and intentionally withhold responses until cleanup.",
+      "protocols": ["Windows named pipes"],
+      "requirements": ["Windows", "Point the client at the generated pipe"],
+      "file": "scenario-packs/windows/named-pipe-blackhole.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/windows/named-pipe-blackhole.yaml"
     }
   ]
 }

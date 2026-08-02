@@ -19,6 +19,7 @@ pub mod process;
 pub mod process_freeze;
 pub mod proxy;
 pub mod socket_corrupt;
+pub mod windows_fault;
 
 use crate::{error::Result, handle::InjectionHandle, target::Target};
 use async_trait::async_trait;
@@ -71,6 +72,7 @@ pub use process::*;
 pub use process_freeze::*;
 pub use proxy::*;
 pub use socket_corrupt::*;
+pub use windows_fault::*;
 
 /// Core trait for all fault injectors
 #[async_trait]
@@ -187,6 +189,7 @@ impl InjectorRegistry {
             "media_streaming_fault",
             Arc::new(MediaStreamingFaultInjector::default()),
         );
+        registry.register("windows_fault", Arc::new(WindowsFaultInjector::default()));
 
         registry
     }

@@ -1,0 +1,15 @@
+name: windows_named_pipe_blackhole
+description: Accept one Windows named-pipe client and withhold every response until cleanup.
+duration: 1m
+labels:
+  pack: windows
+  fault: named-pipe-disruption
+phases:
+  - name: pipe_blackhole
+    duration: 1m
+    injections:
+      - type: windows_fault
+        target:
+          system: true
+        mode: named_pipe_blackhole
+        pipe_name: chaos-upstream

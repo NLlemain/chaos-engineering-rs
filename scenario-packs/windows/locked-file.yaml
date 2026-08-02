@@ -1,0 +1,14 @@
+name: windows_locked_file
+description: Hold an exclusive Windows file handle so other opens fail with a sharing violation.
+duration: 1m
+labels:
+  pack: windows
+  fault: locked-file
+phases:
+  - name: exclusive_lock
+    duration: 1m
+    injections:
+      - type: windows_fault
+        target:
+          file: C:/chaos-lab/locked.tmp
+        mode: file_lock

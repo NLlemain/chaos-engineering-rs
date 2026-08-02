@@ -146,15 +146,16 @@ chaos pack show hls-stale-manifest
 chaos pack install hls-stale-manifest
 ```
 
-The machine-readable catalog at `scenario-packs/catalog.json` includes status, protocols, requirements, and download URLs. Current categories cover AI providers, authentication, containers, databases, media streaming, Kafka/RabbitMQ/NATS, MQTT/IoT, DNS, and object storage. Planned capabilities remain searchable but cannot be installed until they produce an honest real-world effect.
+The machine-readable catalog at `scenario-packs/catalog.json` includes status, protocols, requirements, and download URLs. Current categories cover AI providers, authentication, containers, databases, media streaming, Kafka/RabbitMQ/NATS, MQTT/IoT, DNS, object storage, and Windows. Planned capabilities remain searchable but cannot be installed until they produce an honest real-world effect.
 
-## 📦 Chaos Injectors (23 Total)
+## 📦 Chaos Injectors (24 Total)
 
 | Injector | Category | Description | Status |
 |----------|----------|-------------|--------|
 | `dependency_proxy` | Network | Rootless directional TCP faults for any dependency | Stable |
 | `container_fault` | Container | Docker/Compose pause, stop, kill, restart, and restoration | Stable |
 | `database_fault` | Storage | DuckDB/SQLite outage, read-only, lock, I/O and inode pressure | Stable/Experimental |
+| `windows_fault` | Windows | Service outage, file lock, handle pressure, named-pipe blackhole | Experimental (Windows) |
 | `network_latency` | Network | Native delay on Linux and Windows | Experimental |
 | `packet_loss` | Network | Native Linux packet loss | Experimental (Linux) |
 | `tcp_reset` | Network | Native Linux TCP termination | Experimental (Linux) |

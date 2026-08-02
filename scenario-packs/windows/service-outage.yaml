@@ -1,0 +1,15 @@
+name: windows_service_outage
+description: Stop a Windows service and restore it if it was originally running.
+duration: 30s
+labels:
+  pack: windows
+  fault: service-outage
+phases:
+  - name: service_stopped
+    duration: 30s
+    injections:
+      - type: windows_fault
+        target:
+          system: true
+        mode: service_stop
+        service: Spooler

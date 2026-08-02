@@ -8,7 +8,7 @@ use chaos_core::{
     DiskSlowInjector, DnsFaultConfig, DnsFaultInjector, DnsFaultMode, DynInjector, HttpFaultConfig,
     HttpFaultInjector, HttpFaultType, LocalDatabaseEngine, MemoryPressureConfig,
     MemoryPressureInjector, NetworkLatencyInjector, PacketLossConfig, PacketLossInjector,
-    ProxyDirection, ProxyToxic, Target,
+    ProxyDirection, ProxyToxic, Target, WindowsFaultConfig, WindowsFaultInjector, WindowsFaultMode,
 };
 use serde_json::Value;
 use std::{collections::HashMap, sync::Arc, time::Duration};
@@ -103,6 +103,9 @@ pub fn build_injector(config: &InjectionConfig) -> Result<Option<DynInjector>> {
         "database_fault" => {
             build_database_fault(config).map(|injector| Some(Arc::new(injector) as DynInjector))
         }
+        "windows_fault" => {
+            build_windows_fault(config).map(|injector| Some(Arc::new(injector) as DynInjector))
+        }
         _ if parameters.is_empty() => Ok(None),
         _ => {
             let mut keys: Vec<_> = parameters.keys().cloned().collect();
@@ -114,6 +117,56 @@ pub fn build_injector(config: &InjectionConfig) -> Result<Option<DynInjector>> {
             )
         }
     }
+}
+
+fn build_windows_fault(config: &InjectionConfig) -> Result<WindowsFaultInjector> {
+    let parameters = &config.parameters;
+    ensure_allowed(parameters, &["mode", "service", "count", "pipe_name"])?;
+    let target = config.target.to_target().map_err(anyhow::Error::msg)?;
+    let mode = match required_string(parameters, "mode")?
+        .to_ascii_lowercase()
+        .replace('-', "_")
+        .as_str()
+    {
+        "service_stop" | "service_outage" => {
+            if !matches!(target, Target::System) {
+                bail!("Windows service_stop requires target.system");
+            }
+            WindowsFaultMode::ServiceStop {
+                service: required_string(parameters, "service")?.to_string(),
+            }
+        }
+        "file_lock" | "locked_file" => {
+            if !matches!(target, Target::File { .. }) {
+                bail!("Windows file_lock requires target.file");
+            }
+            WindowsFaultMode::FileLock
+        }
+        "handle_exhaustion" | "handle_pressure" => {
+            if !matches!(target, Target::System) {
+                bail!("Windows handle_exhaustion requires target.system");
+            }
+            WindowsFaultMode::HandleExhaustion {
+                count: usize::try_from(u64_value(parameters, "count")?.unwrap_or(4096))
+                    .context("Parameter 'count' is too large")?,
+            }
+        }
+        "named_pipe_blackhole" | "named_pipe_disruption" => {
+            if !matches!(target, Target::System) {
+                bail!("Windows named_pipe_blackhole requires target.system");
+            }
+            WindowsFaultMode::NamedPipeBlackhole {
+                pipe_name: required_string(parameters, "pipe_name")?.to_string(),
+            }
+        }
+        value => bail!(
+            "Parameter 'mode' must be service_stop, file_lock, handle_exhaustion, or named_pipe_blackhole; got '{}'",
+            value
+        ),
+    };
+    let windows_config = WindowsFaultConfig { mode };
+    windows_config.validate()?;
+    Ok(WindowsFaultInjector::new(windows_config))
 }
 
 fn build_database_fault(config: &InjectionConfig) -> Result<DatabaseFaultInjector> {
