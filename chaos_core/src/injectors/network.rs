@@ -8,6 +8,8 @@ use std::time::Duration;
 #[allow(unused_imports)] // Used in platform-specific code blocks
 use tokio::process::Command;
 use tracing::info;
+#[cfg(target_os = "macos")]
+use tracing::warn;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LatencyDistribution {

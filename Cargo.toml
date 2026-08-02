@@ -46,7 +46,7 @@ metrics-exporter-prometheus = "0.13"
 
 # Chaos primitives
 libc = "0.2"
-nix = { version = "0.27", features = ["signal", "process", "sched"] }
+nix = { version = "0.27", features = ["signal", "process", "sched", "fs"] }
 rand = { version = "0.8", features = ["std_rng"] }
 rand_distr = "0.4"
 

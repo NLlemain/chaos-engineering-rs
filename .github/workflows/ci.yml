@@ -13,7 +13,7 @@ jobs:
     name: Format and lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install Rust
         run: rustup toolchain install stable --profile minimal --component rustfmt,clippy
       - name: Check formatting
@@ -32,7 +32,7 @@ jobs:
           - windows-latest
           - macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install Rust
         run: rustup toolchain install stable --profile minimal
       - name: Run tests

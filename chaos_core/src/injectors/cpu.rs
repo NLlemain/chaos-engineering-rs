@@ -53,7 +53,7 @@ impl CpuStarvationInjector {
         let stop_signal = self.stop_signal.clone();
 
         tokio::task::spawn_blocking(move || {
-            #[cfg(unix)]
+            #[cfg(target_os = "linux")]
             {
                 // Pin to specific core if requested
                 if let Some(core) = core_id {
