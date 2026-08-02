@@ -1,0 +1,15 @@
+name: postgres_dependency_faults
+description: Add downstream latency and a bandwidth limit without administrator privileges.
+duration: 30s
+phases:
+  - name: degraded_database_link
+    duration: 30s
+    injections:
+      - type: dependency_proxy
+        target:
+          address: 127.0.0.1:5432
+        listen: 127.0.0.1:15432
+        direction: downstream
+        latency: 250ms
+        jitter: 40ms
+        bandwidth_bps: 65536

@@ -141,6 +141,9 @@ enum Commands {
         #[arg(long)]
         journal: Option<PathBuf>,
     },
+
+    /// Start a rootless directional dependency fault proxy
+    Proxy(commands::proxy::ProxyArgs),
 }
 
 #[tokio::main]
@@ -227,6 +230,9 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::StopAll { journal } => {
             commands::recover::execute(journal, true).await?;
+        }
+        Commands::Proxy(args) => {
+            commands::proxy::execute(args).await?;
         }
     }
 

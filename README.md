@@ -13,7 +13,7 @@ Built in Rust for performance and safety. Test how your services handle real-wor
 
 - **🌐 Cross-Platform**: Windows, macOS, Linux with platform-native chaos injection and graceful cross-platform fallback
 - **⚡ High Performance**: Async Rust, ~15MB memory, <1% CPU overhead
-- **🎯 Honest Capability Registry**: 20 discoverable chaos types with operational and planned status shown directly by `chaos list`
+- **🎯 Honest Capability Registry**: 21 discoverable chaos types with stable, experimental, and planned status shown directly by `chaos list`
 - **📋 YAML Configuration**: Declarative test scenarios with multi-phase support
 - **🖥️ Web Dashboard**: Dark-themed UI for test management and monitoring
 - **🔥 Load Testing**: Rate-limited concurrent load tests for HTTP/HTTPS APIs and HLS manifests
@@ -54,10 +54,27 @@ cargo build --release
 # Open http://127.0.0.1:8080
 ```
 
+### Start a Rootless Dependency Proxy
+
+Route an application through the printed local address to inject real faults without administrator privileges:
+
+```bash
+chaos proxy \
+  --upstream 127.0.0.1:5432 \
+  --listen 127.0.0.1:15432 \
+  --direction downstream \
+  --latency 250ms \
+  --jitter 40ms \
+  --bandwidth 65536
+```
+
+The proxy supports latency, bandwidth limits, timeouts, slow closes, byte limits, partitions, corruption, duplication, reordering, and per-connection toxicity. Use `scenarios/dependency_proxy.yaml` for the equivalent declarative configuration.
+
 ## 📦 Chaos Injectors (20 Total)
 
 | Injector | Category | Description | Status |
 |----------|----------|-------------|--------|
+| `dependency_proxy` | Network | Rootless directional TCP faults for any dependency | Stable |
 | `network_latency` | Network | Native delay on Linux and Windows | Experimental |
 | `packet_loss` | Network | Native Linux packet loss | Experimental (Linux) |
 | `tcp_reset` | Network | Native Linux TCP termination | Experimental (Linux) |
@@ -164,6 +181,18 @@ phases:
 
 # Start web dashboard
 ./target/release/chaos serve --port 8080
+
+# Check dependencies and recovery state
+./target/release/chaos doctor
+
+# Validate without applying faults
+./target/release/chaos dry-run scenarios/quick_test.yaml
+
+# Clean up after an interrupted run
+./target/release/chaos recover
+
+# Emergency cleanup of every journaled injection
+./target/release/chaos stop-all
 ```
 
 ## 🧪 Test Services

@@ -1,9 +1,10 @@
 use crate::config::InjectionConfig;
 use anyhow::{anyhow, bail, Context, Result};
 use chaos_core::{
-    CpuStarvationConfig, CpuStarvationInjector, DiskOperation, DiskSlowConfig, DiskSlowInjector,
-    DynInjector, MemoryPressureConfig, MemoryPressureInjector, NetworkLatencyInjector,
-    PacketLossConfig, PacketLossInjector,
+    CpuStarvationConfig, CpuStarvationInjector, DependencyProxyConfig, DependencyProxyInjector,
+    DirectedToxic, DiskOperation, DiskSlowConfig, DiskSlowInjector, DynInjector,
+    MemoryPressureConfig, MemoryPressureInjector, NetworkLatencyInjector, PacketLossConfig,
+    PacketLossInjector, ProxyDirection, ProxyToxic, Target,
 };
 use serde_json::Value;
 use std::{collections::HashMap, sync::Arc, time::Duration};
@@ -80,6 +81,9 @@ pub fn build_injector(config: &InjectionConfig) -> Result<Option<DynInjector>> {
             }
             Ok(Some(Arc::new(DiskSlowInjector::new(injector_config))))
         }
+        "dependency_proxy" => {
+            build_dependency_proxy(config).map(|injector| Some(Arc::new(injector) as DynInjector))
+        }
         _ if parameters.is_empty() => Ok(None),
         _ => {
             let mut keys: Vec<_> = parameters.keys().cloned().collect();
@@ -91,6 +95,110 @@ pub fn build_injector(config: &InjectionConfig) -> Result<Option<DynInjector>> {
             )
         }
     }
+}
+
+fn build_dependency_proxy(config: &InjectionConfig) -> Result<DependencyProxyInjector> {
+    let parameters = &config.parameters;
+    ensure_allowed(
+        parameters,
+        &[
+            "listen",
+            "direction",
+            "toxicity",
+            "latency",
+            "jitter",
+            "bandwidth_bps",
+            "timeout",
+            "slow_close",
+            "limit_bytes",
+            "partition",
+            "corruption_rate",
+            "duplicate_rate",
+            "reorder_rate",
+            "reorder_delay",
+        ],
+    )?;
+
+    let Target::Network { address: upstream } =
+        config.target.to_target().map_err(anyhow::Error::msg)?
+    else {
+        bail!("dependency_proxy requires target.address");
+    };
+    let listen = required_string(parameters, "listen")?
+        .parse()
+        .context("Parameter 'listen' must be a socket address")?;
+    let direction = match string(parameters, "direction")?
+        .unwrap_or("both")
+        .to_ascii_lowercase()
+        .as_str()
+    {
+        "upstream" => ProxyDirection::Upstream,
+        "downstream" => ProxyDirection::Downstream,
+        "both" => ProxyDirection::Both,
+        _ => bail!("Parameter 'direction' must be upstream, downstream, or both"),
+    };
+    let toxicity = number(parameters, "toxicity")?
+        .map(|value| probability("toxicity", value))
+        .transpose()?
+        .unwrap_or(1.0);
+    let mut proxy = DependencyProxyConfig::new(listen, upstream);
+    let mut push = |toxic| {
+        proxy
+            .toxics
+            .push(DirectedToxic::new(direction, toxic).with_toxicity(toxicity));
+    };
+
+    if let Some(delay) = duration(parameters, "latency")? {
+        let jitter = duration(parameters, "jitter")?.unwrap_or_default();
+        push(ProxyToxic::Latency {
+            delay_ms: duration_as_millis("latency", delay)?,
+            jitter_ms: duration_as_millis("jitter", jitter)?,
+        });
+    } else if parameters.contains_key("jitter") {
+        bail!("Parameter 'jitter' requires 'latency'");
+    }
+    if let Some(bytes_per_second) = u64_value(parameters, "bandwidth_bps")? {
+        push(ProxyToxic::Bandwidth { bytes_per_second });
+    }
+    if let Some(timeout) = duration(parameters, "timeout")? {
+        push(ProxyToxic::Timeout {
+            timeout_ms: duration_as_millis("timeout", timeout)?,
+        });
+    }
+    if let Some(delay) = duration(parameters, "slow_close")? {
+        push(ProxyToxic::SlowClose {
+            delay_ms: duration_as_millis("slow_close", delay)?,
+        });
+    }
+    if let Some(bytes) = u64_value(parameters, "limit_bytes")? {
+        push(ProxyToxic::LimitData { bytes });
+    }
+    if boolean(parameters, "partition")?.unwrap_or(false) {
+        push(ProxyToxic::Partition);
+    }
+    if let Some(value) = number(parameters, "corruption_rate")? {
+        push(ProxyToxic::Corrupt {
+            probability: probability("corruption_rate", value)?,
+        });
+    }
+    if let Some(value) = number(parameters, "duplicate_rate")? {
+        push(ProxyToxic::Duplicate {
+            probability: probability("duplicate_rate", value)?,
+        });
+    }
+    if let Some(value) = number(parameters, "reorder_rate")? {
+        let delay =
+            duration(parameters, "reorder_delay")?.unwrap_or_else(|| Duration::from_millis(10));
+        push(ProxyToxic::Reorder {
+            probability: probability("reorder_rate", value)?,
+            delay_ms: duration_as_millis("reorder_delay", delay)?,
+        });
+    } else if parameters.contains_key("reorder_delay") {
+        bail!("Parameter 'reorder_delay' requires 'reorder_rate'");
+    }
+
+    proxy.validate()?;
+    Ok(DependencyProxyInjector::new(proxy))
 }
 
 fn ensure_allowed(parameters: &HashMap<String, Value>, allowed: &[&str]) -> Result<()> {
@@ -118,6 +226,48 @@ fn number(parameters: &HashMap<String, Value>, key: &str) -> Result<Option<f64>>
                 .ok_or_else(|| anyhow!("Parameter '{}' must be a finite number", key))
         })
         .transpose()
+}
+
+fn string<'a>(parameters: &'a HashMap<String, Value>, key: &str) -> Result<Option<&'a str>> {
+    parameters
+        .get(key)
+        .map(|value| {
+            value
+                .as_str()
+                .ok_or_else(|| anyhow!("Parameter '{}' must be a string", key))
+        })
+        .transpose()
+}
+
+fn required_string<'a>(parameters: &'a HashMap<String, Value>, key: &str) -> Result<&'a str> {
+    string(parameters, key)?.with_context(|| format!("Missing required parameter '{}'", key))
+}
+
+fn boolean(parameters: &HashMap<String, Value>, key: &str) -> Result<Option<bool>> {
+    parameters
+        .get(key)
+        .map(|value| {
+            value
+                .as_bool()
+                .ok_or_else(|| anyhow!("Parameter '{}' must be true or false", key))
+        })
+        .transpose()
+}
+
+fn u64_value(parameters: &HashMap<String, Value>, key: &str) -> Result<Option<u64>> {
+    parameters
+        .get(key)
+        .map(|value| {
+            value
+                .as_u64()
+                .ok_or_else(|| anyhow!("Parameter '{}' must be a positive integer", key))
+        })
+        .transpose()
+}
+
+fn duration_as_millis(name: &str, duration: Duration) -> Result<u64> {
+    u64::try_from(duration.as_millis())
+        .with_context(|| format!("Parameter '{}' duration is too large", name))
 }
 
 fn probability(key: &str, value: f64) -> Result<f64> {
@@ -230,5 +380,21 @@ mod tests {
         .unwrap();
 
         assert!(build_injector(&config).is_err());
+    }
+
+    #[test]
+    fn dependency_proxy_parameters_build_real_toxics() {
+        let config: InjectionConfig = serde_json::from_value(serde_json::json!({
+            "type": "dependency_proxy",
+            "target": { "address": "127.0.0.1:5432" },
+            "listen": "127.0.0.1:15432",
+            "direction": "downstream",
+            "latency": "75ms",
+            "bandwidth_bps": 4096,
+            "limit_bytes": 8192
+        }))
+        .unwrap();
+
+        assert!(build_injector(&config).unwrap().is_some());
     }
 }

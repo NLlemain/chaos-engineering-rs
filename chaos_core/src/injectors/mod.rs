@@ -15,6 +15,7 @@ pub mod network;
 pub mod nginx_fault;
 pub mod process;
 pub mod process_freeze;
+pub mod proxy;
 pub mod socket_corrupt;
 
 use crate::{error::Result, handle::InjectionHandle, target::Target};
@@ -64,6 +65,7 @@ pub use network::*;
 pub use nginx_fault::*;
 pub use process::*;
 pub use process_freeze::*;
+pub use proxy::*;
 pub use socket_corrupt::*;
 
 /// Core trait for all fault injectors
@@ -151,6 +153,10 @@ impl InjectorRegistry {
             Arc::new(MemoryPressureInjector::default()),
         );
         registry.register("process_kill", Arc::new(ProcessKillInjector::default()));
+        registry.register(
+            "dependency_proxy",
+            Arc::new(DependencyProxyInjector::default()),
+        );
 
         // Register expanded niche & cloud injectors (20 total)
         registry.register("dns_fault", Arc::new(DnsFaultInjector::default()));
