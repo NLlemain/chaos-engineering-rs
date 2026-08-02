@@ -118,6 +118,7 @@ Chaos tests are destructive by design. Start with disposable targets and narrow 
 
 ```bash
 chaos doctor                    # dependencies, permissions, journal state
+chaos doctor --json             # machine-readable checks for CI and editors
 chaos dry-run scenario.yaml     # validation without faults
 chaos recover                   # restore interrupted effects
 chaos stop-all                  # emergency cleanup of all journaled effects

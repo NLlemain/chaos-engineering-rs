@@ -137,7 +137,11 @@ enum Commands {
     },
 
     /// Check injector dependencies and recovery state
-    Doctor,
+    Doctor {
+        /// Emit the doctor report as JSON
+        #[arg(long)]
+        json: bool,
+    },
 
     /// Recover effects left by an interrupted experiment
     Recover {
@@ -254,8 +258,8 @@ async fn main() -> anyhow::Result<()> {
         Commands::DryRun { scenario_file } => {
             commands::dry_run::execute(scenario_file).await?;
         }
-        Commands::Doctor => {
-            commands::doctor::execute().await?;
+        Commands::Doctor { json } => {
+            commands::doctor::execute(json).await?;
         }
         Commands::Recover { journal } => {
             commands::recover::execute(journal, false).await?;
