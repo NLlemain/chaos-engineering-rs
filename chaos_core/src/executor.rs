@@ -1,7 +1,7 @@
 use crate::{
     error::Result,
     handle::{InjectionHandle, InjectionState},
-    injectors::InjectorRegistry,
+    injectors::{DynInjector, InjectorRegistry},
     target::Target,
 };
 use std::collections::HashMap;
@@ -11,7 +11,13 @@ use tracing::info;
 
 pub struct Executor {
     registry: Arc<InjectorRegistry>,
-    active_injections: Arc<RwLock<HashMap<String, InjectionState>>>,
+    active_injections: Arc<RwLock<HashMap<String, ActiveInjection>>>,
+}
+
+#[derive(Clone)]
+struct ActiveInjection {
+    state: InjectionState,
+    injector: DynInjector,
 }
 
 impl Executor {
@@ -27,16 +33,27 @@ impl Executor {
     }
 
     pub async fn inject(&self, injector_name: &str, target: &Target) -> Result<InjectionHandle> {
-        let injector = self.registry.get(injector_name).ok_or_else(|| {
+        let injector = self.registry.get(injector_name).cloned().ok_or_else(|| {
             crate::error::ChaosError::InvalidConfig(format!(
                 "Injector '{}' not found",
                 injector_name
             ))
         })?;
 
+        self.inject_with(injector, target).await
+    }
+
+    /// Apply a configured injector and retain it for the matching cleanup call.
+    pub async fn inject_with(
+        &self,
+        injector: DynInjector,
+        target: &Target,
+    ) -> Result<InjectionHandle> {
+        injector.validate().await?;
+
         info!(
             "Applying injection '{}' to target: {}",
-            injector_name,
+            injector.name(),
             target.description()
         );
 
@@ -46,25 +63,33 @@ impl Executor {
         self.active_injections
             .write()
             .await
-            .insert(handle.id.clone(), state);
+            .insert(handle.id.clone(), ActiveInjection { state, injector });
 
         Ok(handle)
     }
 
     pub async fn remove(&self, handle: InjectionHandle) -> Result<()> {
-        let injector = self.registry.get(&handle.injector_name).ok_or_else(|| {
-            crate::error::ChaosError::InvalidConfig(format!(
-                "Injector '{}' not found",
-                handle.injector_name
-            ))
-        })?;
+        let active = self.active_injections.read().await.get(&handle.id).cloned();
+        let injector = match &active {
+            Some(active) => active.injector.clone(),
+            None => self
+                .registry
+                .get(&handle.injector_name)
+                .cloned()
+                .ok_or_else(|| {
+                    crate::error::ChaosError::InvalidConfig(format!(
+                        "Injector '{}' not found",
+                        handle.injector_name
+                    ))
+                })?,
+        };
 
         info!("Removing injection '{}'", handle.id);
 
         injector.remove(handle.clone()).await?;
 
-        if let Some(state) = self.active_injections.write().await.remove(&handle.id) {
-            state.deactivate().await;
+        if let Some(active) = self.active_injections.write().await.remove(&handle.id) {
+            active.state.deactivate().await;
         }
 
         Ok(())
@@ -78,7 +103,7 @@ impl Executor {
             .read()
             .await
             .values()
-            .map(|state| state.handle().clone())
+            .map(|active| active.state.handle().clone())
             .collect();
 
         for handle in handles {
@@ -95,12 +120,16 @@ impl Executor {
             .read()
             .await
             .values()
-            .map(|state| state.handle().clone())
+            .map(|active| active.state.handle().clone())
             .collect()
     }
 
     pub async fn get_state(&self, handle_id: &str) -> Option<InjectionState> {
-        self.active_injections.read().await.get(handle_id).cloned()
+        self.active_injections
+            .read()
+            .await
+            .get(handle_id)
+            .map(|active| active.state.clone())
     }
 
     pub fn list_injectors(&self) -> Vec<String> {

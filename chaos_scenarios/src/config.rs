@@ -40,6 +40,7 @@ pub struct InjectionConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(deny_unknown_fields)]
 pub struct TargetConfig {
     #[serde(default)]
     pub pid: Option<u32>,
@@ -49,10 +50,30 @@ pub struct TargetConfig {
     pub container_id: Option<String>,
     #[serde(default)]
     pub pattern: Option<String>,
+    #[serde(default)]
+    pub process_name: Option<String>,
+    #[serde(default)]
+    pub system: bool,
 }
 
 impl TargetConfig {
     pub fn to_target(&self) -> Result<chaos_core::Target, String> {
+        let target_count = [
+            self.pid.is_some(),
+            self.address.is_some(),
+            self.container_id.is_some(),
+            self.pattern.is_some(),
+            self.process_name.is_some(),
+            self.system,
+        ]
+        .into_iter()
+        .filter(|is_set| *is_set)
+        .count();
+
+        if target_count > 1 {
+            return Err("Specify exactly one target field".to_string());
+        }
+
         if let Some(pid) = self.pid {
             Ok(chaos_core::Target::process(pid))
         } else if let Some(addr) = &self.address {
@@ -64,8 +85,10 @@ impl TargetConfig {
             Ok(chaos_core::Target::container(id.clone()))
         } else if let Some(pattern) = &self.pattern {
             Ok(chaos_core::Target::process_pattern(pattern.clone()))
+        } else if let Some(process_name) = &self.process_name {
+            Ok(chaos_core::Target::process_pattern(process_name.clone()))
         } else {
-            Err("No target specified".to_string())
+            Ok(chaos_core::Target::system())
         }
     }
 }
@@ -93,6 +116,10 @@ impl Scenario {
             return Err("Scenario must have at least one phase".to_string());
         }
 
+        if self.duration.is_zero() {
+            return Err("Scenario duration must be > 0".to_string());
+        }
+
         for (i, phase) in self.phases.iter().enumerate() {
             if phase.name.is_empty() {
                 return Err(format!("Phase {} name cannot be empty", i));
@@ -109,6 +136,13 @@ impl Scenario {
                         j, phase.name
                     ));
                 }
+
+                injection.target.to_target().map_err(|error| {
+                    format!(
+                        "Injection {} in phase '{}' has an invalid target: {}",
+                        j, phase.name, error
+                    )
+                })?;
             }
         }
 
@@ -306,5 +340,37 @@ mod tests {
 
         let invalid = Scenario::builder().build();
         assert!(invalid.validate().is_err());
+    }
+
+    #[test]
+    fn process_name_target_maps_to_process_pattern() {
+        let target = TargetConfig {
+            process_name: Some("api-service".to_string()),
+            ..TargetConfig::default()
+        };
+
+        assert_eq!(
+            target.to_target(),
+            Ok(chaos_core::Target::process_pattern("api-service"))
+        );
+    }
+
+    #[test]
+    fn empty_target_maps_to_system() {
+        assert_eq!(
+            TargetConfig::default().to_target(),
+            Ok(chaos_core::Target::system())
+        );
+    }
+
+    #[test]
+    fn conflicting_target_fields_are_rejected() {
+        let target = TargetConfig {
+            pid: Some(42),
+            system: true,
+            ..TargetConfig::default()
+        };
+
+        assert!(target.to_target().is_err());
     }
 }
