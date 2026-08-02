@@ -13,5 +13,7 @@ keywords = ["chaos-engineering", "resilience", "fault-injection", "scenarios"]
 categories = ["development-tools::testing", "config"]
 include = ["src/**", "catalog.json", "**/*.yaml", "**/*.md"]
 
-[dev-dependencies]
+[dependencies]
+anyhow = { workspace = true }
+chaos_scenarios = { version = "0.2.1", path = "../chaos_scenarios" }
 serde_json = { workspace = true }

@@ -1,0 +1,14 @@
+name: media_keyframe_loss_planned
+description: Planned codec-aware RTP keyframe loss; this descriptor cannot inject until the RTP parser is implemented.
+duration: 1s
+labels:
+  pack: media
+  protocol: rtp-webrtc
+  status: planned
+phases:
+  - name: planned_keyframe_loss
+    duration: 1s
+    injections:
+      - type: media_streaming_fault
+        target:
+          system: true

@@ -240,8 +240,8 @@
       "description": "Drop RTP packets belonging specifically to video keyframes.",
       "protocols": ["RTP", "WebRTC"],
       "requirements": ["Codec-aware RTP parser not implemented"],
-      "file": null,
-      "download_url": null
+      "file": "scenario-packs/media/keyframe-loss.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/media/keyframe-loss.yaml"
     },
     {
       "id": "kafka-rebalance",

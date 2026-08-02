@@ -368,6 +368,8 @@ dependencies = [
 name = "chaos_packs"
 version = "0.2.1"
 dependencies = [
+ "anyhow",
+ "chaos_scenarios",
  "serde_json",
 ]
 
