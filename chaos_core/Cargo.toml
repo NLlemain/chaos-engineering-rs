@@ -26,6 +26,7 @@ chrono = { workspace = true }
 uuid = { version = "1.6", features = ["v4", "serde"] }
 num_cpus = "1.16"
 reqwest = { version = "0.11", features = ["json"] }
+axum = { workspace = true }
 
 [dev-dependencies]
 mockall = { workspace = true }

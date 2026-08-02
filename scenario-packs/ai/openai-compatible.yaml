@@ -1,0 +1,21 @@
+name: openai_compatible_stream_failures
+description: Delayed tokens, broken streams, and malformed tool arguments for OpenAI-compatible APIs.
+duration: 2m
+labels:
+  pack: ai
+  protocol: openai-compatible
+phases:
+  - name: unstable_generation
+    duration: 2m
+    injections:
+      - type: http_fault
+        target:
+          system: true
+        listen: 127.0.0.1:18081
+        upstream: https://api.openai.com
+        provider: openai
+        path_pattern: /v1/*
+        rate: 0.35
+        stream_delay: 120ms
+        stream_abort: 4
+        malformed_tool_call: true

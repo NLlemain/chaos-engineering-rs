@@ -70,7 +70,23 @@ chaos proxy \
 
 The proxy supports latency, bandwidth limits, timeouts, slow closes, byte limits, partitions, corruption, duplication, reordering, and per-connection toxicity. Use `scenarios/dependency_proxy.yaml` for the equivalent declarative configuration.
 
-## 📦 Chaos Injectors (20 Total)
+### Test AI APIs and Streaming Clients
+
+The provider-aware HTTP proxy supports OpenAI, Azure OpenAI, Anthropic, Gemini, OpenRouter, Ollama, Mistral, Groq, Cohere, Together, vLLM, and generic APIs:
+
+```bash
+chaos ai-proxy \
+  --provider anthropic \
+  --upstream https://api.anthropic.com \
+  --listen 127.0.0.1:18082 \
+  --stream-delay 120ms \
+  --stream-abort 4 \
+  --malformed-tool-call
+```
+
+Point the SDK base URL at the printed local address. The proxy forwards existing authentication headers while injecting provider-shaped 429/5xx errors, delayed SSE or NDJSON events, broken streams, context truncation, malformed tool calls, invalid JSON, empty responses, truncated bodies, and semantic header corruption. Ready-to-edit profiles live in `scenario-packs/ai/`.
+
+## 📦 Chaos Injectors (21 Total)
 
 | Injector | Category | Description | Status |
 |----------|----------|-------------|--------|
@@ -88,7 +104,7 @@ The proxy supports latency, bandwidth limits, timeouts, slow closes, byte limits
 | `dns_fault` | Network | DNS delays, NXDOMAIN spoofing, blackholing | Planned |
 | `clock_skew` | System | Time drift injection for TLS, JWT, and consensus | Planned |
 | `socket_corrupt` | Network | Bit-flipping and payload corruption in flight | Planned |
-| `http_fault` | L7 Web | Synthetic 5xx, 429 rate limits, Slowloris | Planned |
+| `http_fault` | L7 Web/AI | Provider errors, delayed or broken streams, body/header/context faults | Stable |
 | `nginx_fault` | Reverse Proxy | Upstream resets, 502/504 timeouts, SSL drops | Planned |
 | `aws_fault` | Cloud | IMDS blackholing, S3 503, DynamoDB throttle, IAM drop | Planned |
 | `azure_fault` | Cloud | ARM 429 throttling, CosmosDB RU exhaustion, Key Vault 403 | Planned |

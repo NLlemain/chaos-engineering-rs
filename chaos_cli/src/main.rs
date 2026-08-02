@@ -144,6 +144,10 @@ enum Commands {
 
     /// Start a rootless directional dependency fault proxy
     Proxy(commands::proxy::ProxyArgs),
+
+    /// Start a provider-aware AI and HTTP fault proxy
+    #[command(alias = "http-proxy")]
+    AiProxy(commands::ai_proxy::AiProxyArgs),
 }
 
 #[tokio::main]
@@ -233,6 +237,9 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::Proxy(args) => {
             commands::proxy::execute(args).await?;
+        }
+        Commands::AiProxy(args) => {
+            commands::ai_proxy::execute(args).await?;
         }
     }
 

@@ -1,0 +1,19 @@
+name: openrouter_provider_instability
+description: OpenRouter-shaped 429 storms with Retry-After metadata.
+duration: 2m
+labels:
+  pack: ai
+  provider: openrouter
+phases:
+  - name: provider_fallback_pressure
+    duration: 2m
+    injections:
+      - type: http_fault
+        target:
+          system: true
+        listen: 127.0.0.1:18084
+        upstream: https://openrouter.ai/api
+        provider: openrouter
+        path_pattern: /v1/*
+        rate: 0.3
+        status: 429

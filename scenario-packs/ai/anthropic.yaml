@@ -1,0 +1,20 @@
+name: anthropic_rate_limit_and_context_loss
+description: Provider-shaped rate limits and request context truncation for Anthropic Messages API clients.
+duration: 2m
+labels:
+  pack: ai
+  provider: anthropic
+phases:
+  - name: constrained_provider
+    duration: 2m
+    injections:
+      - type: http_fault
+        target:
+          system: true
+        listen: 127.0.0.1:18082
+        upstream: https://api.anthropic.com
+        provider: anthropic
+        path_pattern: /v1/messages*
+        rate: 0.25
+        status: 429
+        context_keep: 2

@@ -1,0 +1,21 @@
+name: gemini_stream_and_tool_failures
+description: Gemini-shaped SSE disruption, malformed function calls, and semantic header damage.
+duration: 2m
+labels:
+  pack: ai
+  provider: gemini
+phases:
+  - name: damaged_interaction
+    duration: 2m
+    injections:
+      - type: http_fault
+        target:
+          system: true
+        listen: 127.0.0.1:18083
+        upstream: https://generativelanguage.googleapis.com
+        provider: gemini
+        rate: 0.4
+        stream_delay: 90ms
+        stream_abort: 3
+        malformed_tool_call: true
+        malformed_headers: true

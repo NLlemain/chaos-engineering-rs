@@ -1,10 +1,11 @@
 use crate::config::InjectionConfig;
 use anyhow::{anyhow, bail, Context, Result};
 use chaos_core::{
-    CpuStarvationConfig, CpuStarvationInjector, DependencyProxyConfig, DependencyProxyInjector,
-    DirectedToxic, DiskOperation, DiskSlowConfig, DiskSlowInjector, DynInjector,
-    MemoryPressureConfig, MemoryPressureInjector, NetworkLatencyInjector, PacketLossConfig,
-    PacketLossInjector, ProxyDirection, ProxyToxic, Target,
+    AiProvider, CpuStarvationConfig, CpuStarvationInjector, DependencyProxyConfig,
+    DependencyProxyInjector, DirectedToxic, DiskOperation, DiskSlowConfig, DiskSlowInjector,
+    DynInjector, HttpFaultConfig, HttpFaultInjector, HttpFaultType, MemoryPressureConfig,
+    MemoryPressureInjector, NetworkLatencyInjector, PacketLossConfig, PacketLossInjector,
+    ProxyDirection, ProxyToxic, Target,
 };
 use serde_json::Value;
 use std::{collections::HashMap, sync::Arc, time::Duration};
@@ -84,6 +85,9 @@ pub fn build_injector(config: &InjectionConfig) -> Result<Option<DynInjector>> {
         "dependency_proxy" => {
             build_dependency_proxy(config).map(|injector| Some(Arc::new(injector) as DynInjector))
         }
+        "http_fault" => {
+            build_http_fault(config).map(|injector| Some(Arc::new(injector) as DynInjector))
+        }
         _ if parameters.is_empty() => Ok(None),
         _ => {
             let mut keys: Vec<_> = parameters.keys().cloned().collect();
@@ -95,6 +99,104 @@ pub fn build_injector(config: &InjectionConfig) -> Result<Option<DynInjector>> {
             )
         }
     }
+}
+
+fn build_http_fault(config: &InjectionConfig) -> Result<HttpFaultInjector> {
+    let parameters = &config.parameters;
+    ensure_allowed(
+        parameters,
+        &[
+            "listen",
+            "upstream",
+            "provider",
+            "path_pattern",
+            "rate",
+            "status",
+            "latency",
+            "stream_delay",
+            "stream_abort",
+            "malformed_tool_call",
+            "context_keep",
+            "truncate_body",
+            "malformed_json",
+            "malformed_headers",
+            "empty_response",
+            "strip_headers",
+            "slowloris",
+        ],
+    )?;
+
+    let listen = required_string(parameters, "listen")?
+        .parse()
+        .context("Parameter 'listen' must be a socket address")?;
+    let provider = string(parameters, "provider")?
+        .unwrap_or("generic")
+        .parse::<AiProvider>()?;
+    let mut faults = Vec::new();
+
+    if let Some(status) = u64_value(parameters, "status")? {
+        faults.push(HttpFaultType::Status {
+            code: u16::try_from(status).context("Parameter 'status' must fit in u16")?,
+            body: String::new(),
+        });
+    }
+    if let Some(delay) = duration(parameters, "latency")? {
+        faults.push(HttpFaultType::Latency { delay });
+    }
+    if let Some(chunk_delay) = duration(parameters, "stream_delay")? {
+        faults.push(HttpFaultType::StreamDelay { chunk_delay });
+    }
+    if let Some(after_events) = u64_value(parameters, "stream_abort")? {
+        faults.push(HttpFaultType::StreamAbort {
+            after_events: usize::try_from(after_events)
+                .context("Parameter 'stream_abort' is too large")?,
+        });
+    }
+    if boolean(parameters, "malformed_tool_call")?.unwrap_or(false) {
+        faults.push(HttpFaultType::MalformedToolCall);
+    }
+    if let Some(keep_last_items) = u64_value(parameters, "context_keep")? {
+        faults.push(HttpFaultType::ContextTruncate {
+            keep_last_items: usize::try_from(keep_last_items)
+                .context("Parameter 'context_keep' is too large")?,
+        });
+    }
+    if let Some(bytes) = u64_value(parameters, "truncate_body")? {
+        faults.push(HttpFaultType::TruncateBody {
+            bytes: usize::try_from(bytes).context("Parameter 'truncate_body' is too large")?,
+        });
+    }
+    if boolean(parameters, "malformed_json")?.unwrap_or(false) {
+        faults.push(HttpFaultType::MalformedJson);
+    }
+    if boolean(parameters, "malformed_headers")?.unwrap_or(false) {
+        faults.push(HttpFaultType::MalformedHeaders);
+    }
+    if boolean(parameters, "empty_response")?.unwrap_or(false) {
+        faults.push(HttpFaultType::EmptyResponse);
+    }
+    if let Some(headers) = string_list(parameters, "strip_headers")? {
+        faults.push(HttpFaultType::StripHeaders { headers });
+    }
+    if let Some(chunk_delay) = duration(parameters, "slowloris")? {
+        faults.push(HttpFaultType::Slowloris { chunk_delay });
+    }
+
+    let http_config = HttpFaultConfig {
+        listen,
+        upstream_url: required_string(parameters, "upstream")?.to_string(),
+        path_pattern: string(parameters, "path_pattern")?
+            .unwrap_or("/*")
+            .to_string(),
+        provider,
+        faults,
+        rate: number(parameters, "rate")?
+            .map(|value| probability("rate", value))
+            .transpose()?
+            .unwrap_or(1.0),
+    };
+    http_config.validate()?;
+    Ok(HttpFaultInjector::new(http_config))
 }
 
 fn build_dependency_proxy(config: &InjectionConfig) -> Result<DependencyProxyInjector> {
@@ -265,6 +367,24 @@ fn u64_value(parameters: &HashMap<String, Value>, key: &str) -> Result<Option<u6
         .transpose()
 }
 
+fn string_list(parameters: &HashMap<String, Value>, key: &str) -> Result<Option<Vec<String>>> {
+    parameters
+        .get(key)
+        .map(|value| {
+            value
+                .as_array()
+                .ok_or_else(|| anyhow!("Parameter '{}' must be an array", key))?
+                .iter()
+                .map(|item| {
+                    item.as_str()
+                        .map(str::to_string)
+                        .ok_or_else(|| anyhow!("Parameter '{}' must contain strings", key))
+                })
+                .collect()
+        })
+        .transpose()
+}
+
 fn duration_as_millis(name: &str, duration: Duration) -> Result<u64> {
     u64::try_from(duration.as_millis())
         .with_context(|| format!("Parameter '{}' duration is too large", name))
@@ -396,5 +516,39 @@ mod tests {
         .unwrap();
 
         assert!(build_injector(&config).unwrap().is_some());
+    }
+
+    #[test]
+    fn ai_http_parameters_support_multiple_provider_faults() {
+        let config: InjectionConfig = serde_json::from_value(serde_json::json!({
+            "type": "http_fault",
+            "target": { "system": true },
+            "listen": "127.0.0.1:18080",
+            "upstream": "https://api.anthropic.com",
+            "provider": "anthropic",
+            "stream_delay": "100ms",
+            "stream_abort": 3,
+            "malformed_tool_call": true,
+            "context_keep": 2
+        }))
+        .unwrap();
+
+        assert!(build_injector(&config).unwrap().is_some());
+    }
+
+    #[test]
+    fn bundled_ai_packs_parse_and_build() {
+        for yaml in [
+            include_str!("../../scenario-packs/ai/openai-compatible.yaml"),
+            include_str!("../../scenario-packs/ai/anthropic.yaml"),
+            include_str!("../../scenario-packs/ai/gemini.yaml"),
+            include_str!("../../scenario-packs/ai/openrouter.yaml"),
+            include_str!("../../scenario-packs/ai/ollama.yaml"),
+        ] {
+            let scenario = crate::parse_scenario_from_str(yaml, "yaml").unwrap();
+            for injection in scenario.phases.iter().flat_map(|phase| &phase.injections) {
+                assert!(build_injector(injection).unwrap().is_some());
+            }
+        }
     }
 }

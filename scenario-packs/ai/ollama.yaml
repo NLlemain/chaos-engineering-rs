@@ -1,0 +1,21 @@
+name: ollama_local_model_stream_failures
+description: Delayed and truncated NDJSON output from a locally running Ollama server.
+duration: 2m
+labels:
+  pack: ai
+  provider: ollama
+phases:
+  - name: local_model_disruption
+    duration: 2m
+    injections:
+      - type: http_fault
+        target:
+          system: true
+        listen: 127.0.0.1:18085
+        upstream: http://127.0.0.1:11434
+        provider: ollama
+        path_pattern: /api/*
+        rate: 0.5
+        stream_delay: 150ms
+        stream_abort: 5
+        malformed_json: true

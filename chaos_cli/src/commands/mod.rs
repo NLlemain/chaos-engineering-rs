@@ -1,3 +1,4 @@
+pub mod ai_proxy;
 pub mod attach;
 pub mod doctor;
 pub mod dry_run;
