@@ -42,40 +42,15 @@ impl DiskSlowInjector {
     pub fn builder() -> DiskSlowBuilder {
         DiskSlowBuilder::default()
     }
-
-    #[cfg(target_os = "linux")]
-    async fn inject_linux(&self, target: &Target) -> Result<InjectionHandle> {
-        info!(
-            "Injecting disk I/O slowdown: latency={}ms",
-            self.config.latency.as_millis()
-        );
-
-        // For process targets, we would inject via LD_PRELOAD
-        // For simplicity, we'll use a marker file approach
-        let marker_file = "/tmp/chaos_disk_slow.json";
-        let config_json = serde_json::to_string(&self.config)?;
-        tokio::fs::write(marker_file, config_json).await?;
-
-        let metadata = serde_json::json!({
-            "marker_file": marker_file,
-            "latency_ms": self.config.latency.as_millis(),
-        });
-
-        Ok(InjectionHandle::new("disk_slow", target.clone(), metadata))
-    }
-
-    #[cfg(not(target_os = "linux"))]
-    async fn inject_linux(&self, _target: &Target) -> Result<InjectionHandle> {
-        Err(ChaosError::SystemError(
-            "Disk slowdown injection only supported on Linux".to_string(),
-        ))
-    }
 }
 
 #[async_trait]
 impl Injector for DiskSlowInjector {
-    async fn inject(&self, target: &Target) -> Result<InjectionHandle> {
-        self.inject_linux(target).await
+    async fn inject(&self, _target: &Target) -> Result<InjectionHandle> {
+        Err(ChaosError::InvalidConfig(format!(
+            "disk_slow is planned; no {:?} delay was applied",
+            self.config.latency
+        )))
     }
 
     async fn remove(&self, handle: InjectionHandle) -> Result<()> {
@@ -92,6 +67,10 @@ impl Injector for DiskSlowInjector {
 
     fn name(&self) -> &str {
         "disk_slow"
+    }
+
+    fn status(&self) -> crate::injectors::InjectorStatus {
+        crate::injectors::InjectorStatus::Planned
     }
 }
 

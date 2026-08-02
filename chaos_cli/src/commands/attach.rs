@@ -1,7 +1,7 @@
 use anyhow::Result;
-use chaos_core::{Executor, Target};
+use chaos_core::{Executor, RecoveryJournal, Target};
 use colored::Colorize;
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 pub async fn execute(
     pid: Option<u32>,
@@ -37,7 +37,8 @@ pub async fn execute(
     }
 
     // Create executor
-    let executor = Executor::with_defaults();
+    let journal = Arc::new(RecoveryJournal::new(RecoveryJournal::default_path()));
+    let executor = Executor::with_defaults_and_journal(journal);
 
     println!("\n{}", "Applying injection...".yellow());
 

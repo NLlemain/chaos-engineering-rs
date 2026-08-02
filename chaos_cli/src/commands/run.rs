@@ -1,8 +1,9 @@
 use anyhow::{bail, Result};
+use chaos_core::RecoveryJournal;
 use chaos_scenarios::{parse_scenario_from_file, ScenarioRunner};
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 use tracing::info;
 
 pub async fn execute(
@@ -54,7 +55,8 @@ pub async fn execute(
     println!("\n{}", "Starting chaos test...".bold().yellow());
 
     // Run scenario
-    let runner = ScenarioRunner::with_defaults();
+    let journal = Arc::new(RecoveryJournal::new(RecoveryJournal::default_path()));
+    let runner = ScenarioRunner::with_journal(journal);
 
     // Spawn progress updater
     let pb_clone = pb.clone();

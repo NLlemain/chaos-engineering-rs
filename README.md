@@ -58,12 +58,12 @@ cargo build --release
 
 | Injector | Category | Description | Status |
 |----------|----------|-------------|--------|
-| `network_latency` | Network | Adds delay to packets (mean + jitter) | Operational |
-| `packet_loss` | Network | Randomly drops network packets | Operational |
-| `tcp_reset` | Network | Terminates TCP connections | Operational |
+| `network_latency` | Network | Native delay on Linux and Windows | Experimental |
+| `packet_loss` | Network | Native Linux packet loss | Experimental (Linux) |
+| `tcp_reset` | Network | Native Linux TCP termination | Experimental (Linux) |
 | `cpu_starvation` | System | Saturates CPU at specified intensity | Operational |
 | `memory_pressure` | System | Allocates memory to target % | Operational |
-| `disk_slow` | System | I/O latency injection | Operational |
+| `disk_slow` | System | I/O latency injection | Planned |
 | `process_kill` | Process | Terminates/restarts processes | Operational |
 | `fd_exhaustion` | System | File descriptor leak simulation (`EMFILE`/`ENFILE`) | Operational |
 | `process_freeze` | Process | Execution pause or OS suspend | Operational |

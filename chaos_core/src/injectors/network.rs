@@ -371,6 +371,11 @@ impl NetworkLatencyInjector {
 #[async_trait]
 impl Injector for NetworkLatencyInjector {
     async fn inject(&self, target: &Target) -> Result<InjectionHandle> {
+        if self.status() == crate::injectors::InjectorStatus::Planned {
+            return Err(ChaosError::InvalidConfig(
+                "network_latency is not implemented on this platform".to_string(),
+            ));
+        }
         self.inject_linux(target).await
     }
 
@@ -380,6 +385,30 @@ impl Injector for NetworkLatencyInjector {
 
     fn name(&self) -> &str {
         "network_latency"
+    }
+
+    fn status(&self) -> crate::injectors::InjectorStatus {
+        #[cfg(any(target_os = "linux", target_os = "windows"))]
+        {
+            crate::injectors::InjectorStatus::Experimental
+        }
+        #[cfg(not(any(target_os = "linux", target_os = "windows")))]
+        {
+            crate::injectors::InjectorStatus::Planned
+        }
+    }
+
+    async fn validate(&self) -> Result<()> {
+        #[cfg(target_os = "linux")]
+        crate::environment::require_command("tc")?;
+        #[cfg(target_os = "windows")]
+        crate::environment::require_command("netsh")?;
+        #[cfg(not(any(target_os = "linux", target_os = "windows")))]
+        return Err(ChaosError::SystemError(
+            "network_latency is not implemented on this platform".to_string(),
+        ));
+
+        crate::environment::require_elevated_privileges().await
     }
 
     fn required_capabilities(&self) -> Vec<String> {
@@ -597,6 +626,11 @@ impl PacketLossInjector {
 #[async_trait]
 impl Injector for PacketLossInjector {
     async fn inject(&self, target: &Target) -> Result<InjectionHandle> {
+        if self.status() == crate::injectors::InjectorStatus::Planned {
+            return Err(ChaosError::InvalidConfig(
+                "packet_loss is not implemented on this platform".to_string(),
+            ));
+        }
         self.inject_linux(target).await
     }
 
@@ -651,6 +685,29 @@ impl Injector for PacketLossInjector {
 
     fn name(&self) -> &str {
         "packet_loss"
+    }
+
+    fn status(&self) -> crate::injectors::InjectorStatus {
+        #[cfg(target_os = "linux")]
+        {
+            crate::injectors::InjectorStatus::Experimental
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            crate::injectors::InjectorStatus::Planned
+        }
+    }
+
+    async fn validate(&self) -> Result<()> {
+        #[cfg(target_os = "linux")]
+        {
+            crate::environment::require_command("tc")?;
+            return crate::environment::require_elevated_privileges().await;
+        }
+        #[cfg(not(target_os = "linux"))]
+        Err(ChaosError::SystemError(
+            "packet_loss is not implemented on this platform".to_string(),
+        ))
     }
 
     fn required_capabilities(&self) -> Vec<String> {
@@ -784,6 +841,11 @@ impl TcpResetInjector {
 #[async_trait]
 impl Injector for TcpResetInjector {
     async fn inject(&self, target: &Target) -> Result<InjectionHandle> {
+        if self.status() == crate::injectors::InjectorStatus::Planned {
+            return Err(ChaosError::InvalidConfig(
+                "tcp_reset is not implemented on this platform".to_string(),
+            ));
+        }
         self.inject_linux(target).await
     }
 
@@ -840,6 +902,29 @@ impl Injector for TcpResetInjector {
 
     fn name(&self) -> &str {
         "tcp_reset"
+    }
+
+    fn status(&self) -> crate::injectors::InjectorStatus {
+        #[cfg(target_os = "linux")]
+        {
+            crate::injectors::InjectorStatus::Experimental
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            crate::injectors::InjectorStatus::Planned
+        }
+    }
+
+    async fn validate(&self) -> Result<()> {
+        #[cfg(target_os = "linux")]
+        {
+            crate::environment::require_command("iptables")?;
+            return crate::environment::require_elevated_privileges().await;
+        }
+        #[cfg(not(target_os = "linux"))]
+        Err(ChaosError::SystemError(
+            "tcp_reset is not implemented on this platform".to_string(),
+        ))
     }
 
     fn required_capabilities(&self) -> Vec<String> {

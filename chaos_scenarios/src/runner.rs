@@ -3,8 +3,8 @@ use crate::{
     injector_factory::build_injector,
     scheduler::{Scheduler, SchedulingMode},
 };
-use chaos_core::{Executor, InjectionHandle};
-use std::time::Duration;
+use chaos_core::{Executor, InjectionHandle, RecoveryJournal};
+use std::{sync::Arc, time::Duration};
 use tokio::time::Instant;
 use tracing::{info, warn};
 
@@ -19,6 +19,10 @@ impl ScenarioRunner {
 
     pub fn with_defaults() -> Self {
         Self::new(Executor::with_defaults())
+    }
+
+    pub fn with_journal(journal: Arc<RecoveryJournal>) -> Self {
+        Self::new(Executor::with_defaults_and_journal(journal))
     }
 
     pub async fn run(&self, scenario: &Scenario) -> anyhow::Result<ScenarioResult> {

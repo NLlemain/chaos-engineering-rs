@@ -118,6 +118,29 @@ enum Commands {
 
     /// List available injectors
     List,
+
+    /// Validate a scenario and environment without applying faults
+    DryRun {
+        /// Path to scenario file
+        scenario_file: PathBuf,
+    },
+
+    /// Check injector dependencies and recovery state
+    Doctor,
+
+    /// Recover effects left by an interrupted experiment
+    Recover {
+        /// Override the recovery journal path
+        #[arg(long)]
+        journal: Option<PathBuf>,
+    },
+
+    /// Emergency cleanup of every journaled injection
+    StopAll {
+        /// Override the recovery journal path
+        #[arg(long)]
+        journal: Option<PathBuf>,
+    },
 }
 
 #[tokio::main]
@@ -192,6 +215,18 @@ async fn main() -> anyhow::Result<()> {
 
         Commands::List => {
             commands::list::execute().await?;
+        }
+        Commands::DryRun { scenario_file } => {
+            commands::dry_run::execute(scenario_file).await?;
+        }
+        Commands::Doctor => {
+            commands::doctor::execute().await?;
+        }
+        Commands::Recover { journal } => {
+            commands::recover::execute(journal, false).await?;
+        }
+        Commands::StopAll { journal } => {
+            commands::recover::execute(journal, true).await?;
         }
     }
 

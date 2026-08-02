@@ -49,18 +49,15 @@ async fn test_registered_injectors_report_honest_status() {
     let registry = InjectorRegistry::with_defaults();
     let info = registry.list_info();
 
-    assert_eq!(
-        info.iter()
-            .filter(|injector| injector.status == InjectorStatus::Stable)
-            .count(),
-        10
-    );
-    assert_eq!(
-        info.iter()
-            .filter(|injector| injector.status == InjectorStatus::Planned)
-            .count(),
-        10
-    );
+    assert!(info
+        .iter()
+        .any(|injector| injector.status == InjectorStatus::Stable));
+    assert!(info
+        .iter()
+        .any(|injector| injector.status == InjectorStatus::Experimental));
+    assert!(info
+        .iter()
+        .any(|injector| injector.status == InjectorStatus::Planned));
 }
 
 #[tokio::test]

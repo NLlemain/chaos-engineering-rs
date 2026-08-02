@@ -2,6 +2,7 @@ use crate::{
     error::Result,
     handle::{InjectionHandle, InjectionState},
     injectors::{DynInjector, InjectorInfo, InjectorRegistry, InjectorStatus},
+    recovery::RecoveryJournal,
     target::Target,
 };
 use std::collections::HashMap;
@@ -12,6 +13,7 @@ use tracing::info;
 pub struct Executor {
     registry: Arc<InjectorRegistry>,
     active_injections: Arc<RwLock<HashMap<String, ActiveInjection>>>,
+    journal: Option<Arc<RecoveryJournal>>,
 }
 
 #[derive(Clone)]
@@ -25,11 +27,24 @@ impl Executor {
         Self {
             registry: Arc::new(registry),
             active_injections: Arc::new(RwLock::new(HashMap::new())),
+            journal: None,
+        }
+    }
+
+    pub fn with_journal(registry: InjectorRegistry, journal: Arc<RecoveryJournal>) -> Self {
+        Self {
+            registry: Arc::new(registry),
+            active_injections: Arc::new(RwLock::new(HashMap::new())),
+            journal: Some(journal),
         }
     }
 
     pub fn with_defaults() -> Self {
         Self::new(InjectorRegistry::with_defaults())
+    }
+
+    pub fn with_defaults_and_journal(journal: Arc<RecoveryJournal>) -> Self {
+        Self::with_journal(InjectorRegistry::with_defaults(), journal)
     }
 
     pub async fn inject(&self, injector_name: &str, target: &Target) -> Result<InjectionHandle> {
@@ -64,6 +79,12 @@ impl Executor {
         );
 
         let handle = injector.inject(target).await?;
+        if let Some(journal) = &self.journal {
+            if let Err(error) = journal.record(&handle).await {
+                let _ = injector.remove(handle).await;
+                return Err(error);
+            }
+        }
         let state = InjectionState::new(handle.clone());
 
         self.active_injections
@@ -93,6 +114,10 @@ impl Executor {
         info!("Removing injection '{}'", handle.id);
 
         injector.remove(handle.clone()).await?;
+
+        if let Some(journal) = &self.journal {
+            journal.remove(&handle.id).await?;
+        }
 
         if let Some(active) = self.active_injections.write().await.remove(&handle.id) {
             active.state.deactivate().await;

@@ -1,5 +1,8 @@
 pub mod attach;
+pub mod doctor;
+pub mod dry_run;
 pub mod list;
+pub mod recover;
 pub mod report;
 pub mod run;
 pub mod serve;
