@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/Ninian-Lemain/chaos-engineering-rs/discussions
+    about: Use Discussions for support, design exploration, and open-ended ideas.
+  - name: Security report
+    url: https://github.com/Ninian-Lemain/chaos-engineering-rs/security/policy
+    about: Report vulnerabilities privately through the security policy.

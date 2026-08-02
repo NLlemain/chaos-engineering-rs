@@ -1,0 +1,13 @@
+{"version":2,"width":106,"height":28,"timestamp":1785672000,"duration":30.0,"command":"chaos demo","title":"chaos-engineering-rs: 30-second tour","env":{"SHELL":"pwsh","TERM":"xterm-256color"}}
+[0.2,"o","\u001b[1;36mchaos-engineering-rs v0.2\u001b[0m  rootless faults, recovery, and SLO gates\r\n\r\n"]
+[1.0,"o","\u001b[1;32mPS>\u001b[0m chaos list\r\n"]
+[1.8,"o","=== Available Injectors ===\r\n\r\nTotal injectors: 24\r\n\r\n  container_fault              stable       [Docker CLI and daemon access]\r\n  cpu_starvation               stable\r\n  database_fault               stable       [Database directory access]\r\n  dependency_proxy             stable\r\n  dns_fault                    stable\r\n  http_fault                   stable\r\n  process_kill                 experimental [Process termination rights]\r\n  windows_fault                experimental\r\n  aws_fault                    planned\r\n\r\n"]
+[8.0,"o","\u001b[1;32mPS>\u001b[0m chaos doctor\r\n"]
+[8.8,"o","=== Chaos Doctor ===\r\n  cpu_starvation               ready\r\n  database_fault               ready\r\n  dependency_proxy             ready\r\n  dns_fault                    ready\r\n  http_fault                   ready\r\n  windows_fault                ready\r\n\r\nRecovery journal: ~/.chaos-engineering/recovery.json\r\nRecorded active injections: 0\r\n\r\n"]
+[14.0,"o","\u001b[1;32mPS>\u001b[0m chaos pack list --category ai\r\n"]
+[14.8,"o","Scenario packs\r\nID                                 CATEGORY  STATUS  TITLE\r\nai-openai-compatible               ai        stable  OpenAI-compatible stream failures\r\nai-anthropic                       ai        stable  Anthropic API failures\r\nai-gemini                          ai        stable  Gemini stream failures\r\nai-openrouter                      ai        stable  OpenRouter API failures\r\nai-ollama                          ai        stable  Ollama local API failures\r\n\r\n"]
+[20.5,"o","\u001b[1;32mPS>\u001b[0m chaos dry-run scenarios/slo_gate.yaml\r\n"]
+[21.3,"o","=== Scenario Dry Run ===\r\nFile: scenarios/slo_gate.yaml\r\n\u001b[1;32mDry run passed; no faults were applied.\u001b[0m\r\n\r\n"]
+[25.0,"o","\u001b[1;32mPS>\u001b[0m chaos recover\r\n"]
+[25.8,"o","=== Recover Interrupted Injections ===\r\nJournal: ~/.chaos-engineering/recovery.json\r\n\u001b[1;32mNo active injections recorded.\u001b[0m\r\n\r\n"]
+[29.4,"o","\u001b[1;36mReady for a controlled experiment.\u001b[0m\r\n"]

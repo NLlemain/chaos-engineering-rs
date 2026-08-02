@@ -1,169 +1,26 @@
-# GitHub Repository Information
+# GitHub Project Configuration
 
-## Suggested Repository Names (in order of preference)
+Repository: `Ninian-Lemain/chaos-engineering-rs`
 
-1. **chaos-engineering-rs** (Recommended)
-   - Clear, concise, indicates Rust
-   - Available pattern, professional
+## Description
 
-2. **rust-chaos-framework**
-   - Descriptive and searchable
-   - Makes the language explicit
+Cross-platform chaos testing with rootless network/API faults, recovery, SLO gates, Docker/database targets, telemetry, and downloadable protocol packs.
 
-3. **chaos-forge**
-   - Creative, memorable
-   - "Forge" implies building/testing
+## Topics
 
-4. **resilience-test-framework**
-   - Emphasizes the goal
-   - More enterprise-friendly name
+`chaos-engineering`, `resilience-testing`, `fault-injection`, `rust`, `sre`, `devops`, `docker`, `kubernetes`, `observability`, `opentelemetry`, `prometheus`, `ai-testing`, `database-testing`, `windows`, `github-actions`
 
-5. **chaos-injector**
-   - Direct and clear
-   - Describes core functionality
+## Community
 
-## Repository Description
+- Discussions: enabled for questions, ideas, and scenario-pack design.
+- Issues: bug, feature, and scenario-pack forms in `.github/ISSUE_TEMPLATE`.
+- Roadmap: `docs/ROADMAP.md`.
+- Good first issues: labeled `good first issue` and scoped to documentation, packs, tests, or a single injector behavior.
 
-### Short Description (for GitHub header - max 350 chars)
-```
-A lightweight, cross-platform chaos engineering framework built in Rust for testing service resilience through controlled failure injection. Supports network latency, packet loss, CPU/memory pressure, and more on Windows, macOS, and Linux.
-```
+## Distribution
 
-### Alternative Short Description (more casual)
-```
-Test services by breaking them on purpose. Cross-platform chaos engineering in Rust with an honest capability registry, YAML scenarios, and multi-format reporting.
-```
-
-### Topics/Tags (for GitHub)
-```
-chaos-engineering
-rust
-testing
-resilience
-distributed-systems
-devops
-observability
-sre
-performance-testing
-stress-testing
-tokio
-async
-cross-platform
-fault-injection
-reliability
-```
-
-## About Section Details
-
-**Website**: (Leave blank or add your docs site later)
-
-**Topics**: Add the tags above
-
-**Releases**: v0.1.0 (initial release)
-
-**Social Preview Image**: Consider creating one with:
-- Framework name
-- Rust logo
-- Key features (7 injectors, cross-platform, etc.)
-- Dark/professional color scheme
-
-## README Badges (Already Included)
-
-✅ License badge
-✅ Rust version badge  
-✅ Platform support badge
-
-Consider adding later:
-- Build status (when CI/CD is set up)
-- Code coverage
-- Crates.io version (if published)
-- Documentation link
-
-## Initial Release Checklist
-
-- [x] Comprehensive README
-- [x] License file (MIT)
-- [x] Security policy
-- [x] Quick start guide
-- [x] Example scenarios
-- [x] Helper scripts
-- [ ] Add CONTRIBUTING.md (optional)
-- [ ] Add CODE_OF_CONDUCT.md (if accepting contributions)
-- [ ] Set up GitHub Issues templates
-- [ ] Set up PR template
-- [ ] Add .github/FUNDING.yml (if accepting sponsorship)
-
-## Recommended Repository Settings
-
-**Options to Enable:**
-- Issues
-- Discussions (for Q&A)
-- Projects (for roadmap)
-- Wiki (optional, for extended docs)
-
-**Branch Protection** (main branch):
-- Require PR reviews
-- Require status checks (when CI/CD added)
-- Include administrators
-
-**Merge Options**:
-- Allow squash merging (recommended)
-- Allow merge commits
-- Delete branches after merge
-
-## First Release Note Template
-
-```markdown
-# v0.1.0 - Initial Release
-
-## 🎉 First Public Release
-
-A fully functional chaos engineering framework built in Rust!
-
-### Features
-
-- ✨ 7 chaos injector types
-- 🌐 Full cross-platform support (Windows, macOS, Linux)
-- 📋 YAML-based test scenarios
-- 📊 Multiple output formats (CLI, JSON, Markdown, Prometheus)
-- 🧪 Example target services included
-- ⚡ High performance with minimal overhead
-- 🛡️ Safe by design with input validation
-
-### Included Chaos Injectors
-
-- Network Latency
-- Packet Loss
-- TCP Connection Reset
-- CPU Starvation
-- Memory Pressure
-- Disk I/O Slowdown
-- Process Kill/Restart
-
-### What's in the Box
-
-- Pre-built scenarios for quick testing
-- Three example target services
-- Helper scripts for common workflows
-- Comprehensive documentation
-
-### Installation
-
-```bash
-git clone https://github.com/yourusername/chaos-engineering-rs
-cd chaos-engineering-rs
-cargo build --release
-```
-
-See [QUICKSTART.md](QUICKSTART.md) for detailed instructions.
-
-### Known Limitations
-
-- No Kubernetes integration yet
-- Network chaos on Windows is application-level simulation
-- No web UI (CLI only)
-
-### Feedback Welcome!
-
-This is the first release - please report bugs, request features, or contribute!
-```
+- GitHub Release artifacts: Windows x64, Linux x64, macOS x64, macOS arm64.
+- Artifact provenance: GitHub attestations plus SHA-256 files.
+- Container: `ghcr.io/ninian-lemain/chaos-engineering-rs`.
+- Action: `Ninian-Lemain/chaos-engineering-rs@v0.2.0`.
+- Package-manager manifests are rendered from release checksums.

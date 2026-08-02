@@ -1,0 +1,44 @@
+name: Scenario pack proposal
+description: Request or design a protocol-specific downloadable failure pack.
+title: "pack: "
+labels:
+  - scenario-pack
+body:
+  - type: input
+    id: protocol
+    attributes:
+      label: Protocol or product
+      placeholder: Kafka, HLS, OAuth, MQTT, S3, PostgreSQL
+    validations:
+      required: true
+  - type: textarea
+    id: failures
+    attributes:
+      label: Failure modes
+      description: List the concrete failures users need to reproduce.
+    validations:
+      required: true
+  - type: textarea
+    id: primitives
+    attributes:
+      label: Existing primitives
+      description: Which TCP, HTTP, DNS, TLS, container, database, or Windows primitives can implement them?
+    validations:
+      required: true
+  - type: textarea
+    id: fixture
+    attributes:
+      label: Test fixture
+      description: Name a local or containerized target that can prove disruption and restoration.
+    validations:
+      required: true
+  - type: dropdown
+    id: status
+    attributes:
+      label: Proposed initial status
+      options:
+        - experimental
+        - planned
+        - stable (requires integration evidence)
+    validations:
+      required: true

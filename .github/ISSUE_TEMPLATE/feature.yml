@@ -1,0 +1,43 @@
+name: Feature request
+description: Propose a core, CLI, telemetry, or workflow improvement.
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What resilience-testing problem cannot be handled today?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe observable behavior, not only an API shape.
+    validations:
+      required: true
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Best fit
+      options:
+        - Existing injector extension
+        - CLI or report
+        - Recovery or safety
+        - Observability
+        - Integration testing
+        - Unsure
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Disruption and recovery evidence
+      description: How could CI prove that the target was disrupted and restored?
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Could a rootless proxy or scenario pack already express this?
