@@ -74,3 +74,14 @@ async fn test_planned_injector_cannot_report_success() {
 
     assert!(error.to_string().contains("planned but not implemented"));
 }
+
+#[cfg(windows)]
+#[tokio::test]
+async fn windows_process_freeze_cannot_report_simulated_success() {
+    let executor = Executor::with_defaults();
+    let error = executor
+        .inject("process_freeze", &Target::process(std::process::id()))
+        .await
+        .expect_err("Windows process freeze must remain planned");
+    assert!(error.to_string().contains("planned but not implemented"));
+}

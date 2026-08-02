@@ -1,6 +1,7 @@
 use crate::{error::*, handle::InjectionHandle, injectors::Injector, target::Target};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+#[cfg(unix)]
 use tracing::info;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -32,73 +33,100 @@ impl ProcessFreezeInjector {
 #[async_trait]
 impl Injector for ProcessFreezeInjector {
     async fn inject(&self, target: &Target) -> Result<InjectionHandle> {
-        let pid = match target {
-            Target::Process { pid } => *pid,
-            _ => self.config.pid.ok_or_else(|| {
-                ChaosError::InvalidConfig("Target must specify process PID for freeze".to_string())
-            })?,
-        };
-
-        info!("Injecting Process Freeze on PID {}", pid);
+        #[cfg(not(unix))]
+        {
+            let _ = target;
+            Err(ChaosError::SystemError(
+                "process_freeze is only implemented on Unix".to_string(),
+            ))
+        }
 
         #[cfg(unix)]
         {
+            let pid = match target {
+                Target::Process { pid } => *pid,
+                _ => self.config.pid.ok_or_else(|| {
+                    ChaosError::InvalidConfig(
+                        "Target must specify process PID for freeze".to_string(),
+                    )
+                })?,
+            };
+            info!("Injecting Process Freeze on PID {}", pid);
             use nix::sys::signal::{kill, Signal};
             use nix::unistd::Pid;
             kill(Pid::from_raw(pid as i32), Signal::SIGSTOP).map_err(|e| {
                 ChaosError::InjectionFailed(format!("Failed to send SIGSTOP: {}", e))
             })?;
+
+            let metadata = serde_json::json!({
+                "pid": pid,
+                "status": "frozen",
+            });
+            Ok(InjectionHandle::new(
+                "process_freeze",
+                target.clone(),
+                metadata,
+            ))
         }
-
-        #[cfg(not(unix))]
-        {
-            info!("Process freeze simulated on non-unix OS for PID {}", pid);
-        }
-
-        let metadata = serde_json::json!({
-            "pid": pid,
-            "status": "frozen",
-        });
-
-        Ok(InjectionHandle::new(
-            "process_freeze",
-            target.clone(),
-            metadata,
-        ))
     }
 
     async fn remove(&self, handle: InjectionHandle) -> Result<()> {
-        let pid = handle
-            .metadata
-            .get("pid")
-            .and_then(|v| v.as_u64())
-            .map(|v| v as u32)
-            .ok_or_else(|| ChaosError::CleanupFailed("Missing PID metadata".to_string()))?;
-
-        info!("Resuming frozen process PID {}", pid);
+        #[cfg(not(unix))]
+        {
+            let _ = handle;
+            Ok(())
+        }
 
         #[cfg(unix)]
         {
+            let pid = handle
+                .metadata
+                .get("pid")
+                .and_then(|v| v.as_u64())
+                .map(|v| v as u32)
+                .ok_or_else(|| ChaosError::CleanupFailed("Missing PID metadata".to_string()))?;
+            info!("Resuming frozen process PID {}", pid);
             use nix::sys::signal::{kill, Signal};
             use nix::unistd::Pid;
             kill(Pid::from_raw(pid as i32), Signal::SIGCONT)
                 .map_err(|e| ChaosError::CleanupFailed(format!("Failed to send SIGCONT: {}", e)))?;
+            Ok(())
         }
-
-        #[cfg(not(unix))]
-        {
-            info!("Process resume simulated on non-unix OS for PID {}", pid);
-        }
-
-        Ok(())
     }
 
     fn name(&self) -> &str {
         "process_freeze"
     }
 
+    fn status(&self) -> crate::injectors::InjectorStatus {
+        if cfg!(unix) {
+            crate::injectors::InjectorStatus::Stable
+        } else {
+            crate::injectors::InjectorStatus::Planned
+        }
+    }
+
+    async fn validate(&self) -> Result<()> {
+        if self.config.pid == Some(0) {
+            return Err(ChaosError::InvalidConfig(
+                "Process freeze PID must be greater than zero".to_string(),
+            ));
+        }
+        if cfg!(unix) {
+            Ok(())
+        } else {
+            Err(ChaosError::SystemError(
+                "process_freeze is only implemented on Unix".to_string(),
+            ))
+        }
+    }
+
     fn required_capabilities(&self) -> Vec<String> {
-        vec!["CAP_SYS_PTRACE".to_string()]
+        if cfg!(unix) {
+            vec!["Permission to signal the target process".to_string()]
+        } else {
+            Vec::new()
+        }
     }
 }
 

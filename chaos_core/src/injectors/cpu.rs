@@ -151,8 +151,16 @@ impl Injector for CpuStarvationInjector {
         "cpu_starvation"
     }
 
-    fn required_capabilities(&self) -> Vec<String> {
-        vec!["CAP_SYS_NICE".to_string()]
+    async fn validate(&self) -> Result<()> {
+        if !self.config.intensity.is_finite()
+            || self.config.intensity <= 0.0
+            || self.config.intensity > 1.0
+        {
+            return Err(ChaosError::InvalidConfig(
+                "CPU intensity must be greater than 0.0 and at most 1.0".to_string(),
+            ));
+        }
+        Ok(())
     }
 }
 
@@ -306,6 +314,12 @@ mod tests {
 
         assert_eq!(injector.config.intensity, 0.5);
         assert_eq!(injector.config.threads, vec![0, 1]);
+    }
+
+    #[tokio::test]
+    async fn zero_intensity_is_rejected_as_no_effect() {
+        let injector = CpuStarvationInjector::builder().intensity(0.0).build();
+        assert!(injector.validate().await.is_err());
     }
 
     #[test]

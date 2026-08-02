@@ -107,6 +107,25 @@ impl Injector for DiskFillInjector {
     fn name(&self) -> &str {
         "disk_fill"
     }
+
+    async fn validate(&self) -> Result<()> {
+        if self.config.fill_size_bytes == 0 || self.config.block_size_bytes == 0 {
+            return Err(ChaosError::InvalidConfig(
+                "Disk fill size and block size must be greater than zero".to_string(),
+            ));
+        }
+        if !self.config.target_path.is_dir() {
+            return Err(ChaosError::InvalidConfig(format!(
+                "Disk fill target directory does not exist: {}",
+                self.config.target_path.display()
+            )));
+        }
+        Ok(())
+    }
+
+    fn required_capabilities(&self) -> Vec<String> {
+        vec!["Write access to the target directory".to_string()]
+    }
 }
 
 #[derive(Default)]
@@ -158,5 +177,15 @@ mod tests {
 
         injector.remove(handle).await.unwrap();
         assert!(!std::path::Path::new(&path_str).exists());
+    }
+
+    #[tokio::test]
+    async fn zero_byte_fill_is_rejected_as_no_effect() {
+        let injector = DiskFillInjector::new(DiskFillConfig {
+            target_path: std::env::temp_dir(),
+            fill_size_bytes: 0,
+            block_size_bytes: 1024,
+        });
+        assert!(injector.validate().await.is_err());
     }
 }

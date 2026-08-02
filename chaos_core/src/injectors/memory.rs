@@ -113,9 +113,13 @@ impl Injector for MemoryPressureInjector {
 
         let bytes_to_allocate = self.calculate_bytes_to_allocate().await?;
 
-        if bytes_to_allocate > 0 {
-            self.allocate_memory(bytes_to_allocate).await?;
+        if bytes_to_allocate == 0 {
+            return Err(ChaosError::InjectionFailed(
+                "Memory usage already meets or exceeds the requested target; no pressure was applied"
+                    .to_string(),
+            ));
         }
+        self.allocate_memory(bytes_to_allocate).await?;
 
         let metadata = serde_json::json!({
             "bytes_allocated": bytes_to_allocate,
@@ -146,6 +150,11 @@ impl Injector for MemoryPressureInjector {
         {
             return Err(ChaosError::InvalidConfig(
                 "Memory target_usage and failure_rate must be between 0.0 and 1.0".to_string(),
+            ));
+        }
+        if self.config.target_usage == 0.0 {
+            return Err(ChaosError::InvalidConfig(
+                "Memory target_usage must be greater than 0.0".to_string(),
             ));
         }
         Ok(())

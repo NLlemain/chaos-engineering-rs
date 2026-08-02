@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tokio::process::Command;
-use tracing::{info, warn};
+use tracing::info;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Signal {
@@ -56,7 +56,11 @@ pub struct ProcessKillConfig {
 impl Default for ProcessKillConfig {
     fn default() -> Self {
         Self {
-            signal: Signal::SIGTERM,
+            signal: if cfg!(windows) {
+                Signal::SIGKILL
+            } else {
+                Signal::SIGTERM
+            },
             restart_delay: Duration::from_secs(5),
             restart_mode: RestartMode::None,
             restart_command: None,
@@ -103,13 +107,20 @@ impl ProcessKillInjector {
         {
             // Windows doesn't have Unix signals, use TerminateProcess
             if matches!(self.config.signal, Signal::SIGKILL) {
-                Command::new("taskkill")
+                let output = Command::new("taskkill")
                     .args(["/F", "/PID", &pid.to_string()])
                     .output()
                     .await
                     .map_err(|e| {
                         ChaosError::ProcessError(format!("Failed to kill process: {}", e))
                     })?;
+                if !output.status.success() {
+                    return Err(ChaosError::ProcessError(format!(
+                        "taskkill failed: {}{}",
+                        String::from_utf8_lossy(&output.stdout).trim(),
+                        String::from_utf8_lossy(&output.stderr).trim()
+                    )));
+                }
             } else {
                 return Err(ChaosError::SystemError(
                     "Only SIGKILL supported on Windows".to_string(),
@@ -132,8 +143,10 @@ impl ProcessKillInjector {
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
 
-        warn!("Process {} did not terminate within timeout", pid);
-        Ok(())
+        Err(ChaosError::ProcessError(format!(
+            "Process {} did not terminate within {:?}",
+            pid, timeout
+        )))
     }
 
     async fn restart_process(&self) -> Result<u32> {
@@ -248,8 +261,26 @@ impl Injector for ProcessKillInjector {
         "process_kill"
     }
 
+    fn status(&self) -> crate::injectors::InjectorStatus {
+        crate::injectors::InjectorStatus::Experimental
+    }
+
+    async fn validate(&self) -> Result<()> {
+        #[cfg(windows)]
+        if !matches!(self.config.signal, Signal::SIGKILL) {
+            return Err(ChaosError::InvalidConfig(
+                "Windows process_kill requires SIGKILL".to_string(),
+            ));
+        }
+        Ok(())
+    }
+
     fn required_capabilities(&self) -> Vec<String> {
-        vec!["CAP_KILL".to_string()]
+        if cfg!(windows) {
+            vec!["Process termination rights".to_string()]
+        } else {
+            vec!["Permission to signal the target process".to_string()]
+        }
     }
 }
 
@@ -393,5 +424,26 @@ mod tests {
 
         assert!(matches!(injector.config.signal, Signal::SIGKILL));
         assert_eq!(injector.config.restart_delay, Duration::from_secs(10));
+    }
+
+    #[tokio::test]
+    async fn process_kill_terminates_a_real_child() {
+        #[cfg(windows)]
+        let mut child = Command::new("cmd.exe")
+            .args(["/C", "ping -n 30 127.0.0.1 >NUL"])
+            .spawn()
+            .unwrap();
+        #[cfg(unix)]
+        let mut child = Command::new("sh").args(["-c", "sleep 30"]).spawn().unwrap();
+
+        let pid = child.id().unwrap();
+        let target = Target::process(pid);
+        assert!(target.exists().await);
+        let injector = ProcessKillInjector::default();
+        let handle = injector.inject(&target).await.unwrap();
+        assert_eq!(handle.metadata["original_pid"], pid);
+        assert!(!target.exists().await);
+        injector.remove(handle).await.unwrap();
+        let _ = child.wait().await;
     }
 }
