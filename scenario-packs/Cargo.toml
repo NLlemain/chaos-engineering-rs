@@ -15,5 +15,4 @@ include = ["src/**", "catalog.json", "**/*.yaml", "**/*.md"]
 
 [dependencies]
 anyhow = { workspace = true }
-chaos_scenarios = { version = "0.2.1", path = "../chaos_scenarios" }
 serde_json = { workspace = true }

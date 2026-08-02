@@ -22,7 +22,14 @@ const KNOWN_CATEGORIES: &[&str] = &[
 const KNOWN_STATUSES: &[&str] = &["stable", "experimental", "planned"];
 
 /// Validate catalog metadata and parse every referenced scenario from a repository checkout.
-pub fn validate_catalog(catalog_json: &str, repository_root: impl AsRef<Path>) -> Result<()> {
+pub fn validate_catalog<F>(
+    catalog_json: &str,
+    repository_root: impl AsRef<Path>,
+    mut parse_scenario: F,
+) -> Result<()>
+where
+    F: FnMut(&str, &str) -> Result<()>,
+{
     let root: Value = serde_json::from_str(catalog_json).context("catalog field '<document>'")?;
     if root.get("schema_version").and_then(Value::as_u64) != Some(1) {
         bail!("catalog field 'schema_version': expected integer 1");
@@ -102,7 +109,7 @@ pub fn validate_catalog(catalog_json: &str, repository_root: impl AsRef<Path>) -
                     pack_name, source
                 )
             })?;
-        chaos_scenarios::parse_scenario_from_str(&contents, format).with_context(|| {
+        parse_scenario(&contents, format).with_context(|| {
             format!(
                 "pack '{}' field 'file': '{}' is not a valid scenario",
                 pack_name, source
@@ -165,10 +172,19 @@ mod tests {
     #[test]
     fn every_catalog_entry_and_source_is_valid() {
         let repository_root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
-        validate_catalog(CATALOG_JSON, repository_root).unwrap();
+        let mut parsed_sources = 0usize;
+        validate_catalog(CATALOG_JSON, repository_root, |contents, format| {
+            assert!(!contents.trim().is_empty());
+            assert!(matches!(format, "yaml" | "yml" | "toml" | "json"));
+            parsed_sources += 1;
+            Ok(())
+        })
+        .unwrap();
 
         let value: Value = serde_json::from_str(CATALOG_JSON).unwrap();
-        assert!(value["packs"].as_array().unwrap().len() >= 30);
+        let pack_count = value["packs"].as_array().unwrap().len();
+        assert!(pack_count >= 30);
+        assert_eq!(parsed_sources, pack_count);
     }
 
     #[test]
@@ -189,7 +205,8 @@ mod tests {
             }]
         });
 
-        let error = validate_catalog(&catalog.to_string(), repository_root).unwrap_err();
+        let error =
+            validate_catalog(&catalog.to_string(), repository_root, |_, _| Ok(())).unwrap_err();
         assert!(
             error
                 .to_string()
