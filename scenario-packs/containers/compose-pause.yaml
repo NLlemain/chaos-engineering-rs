@@ -1,0 +1,15 @@
+name: compose_service_pause
+description: Pause every running container for a Compose service and restore its prior state.
+duration: 30s
+labels:
+  pack: containers
+  runtime: docker-compose
+phases:
+  - name: pause_api_service
+    duration: 30s
+    injections:
+      - type: container_fault
+        target:
+          compose_service: api
+          compose_file: compose.yaml
+        action: pause

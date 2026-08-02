@@ -154,6 +154,9 @@ enum Commands {
 
     /// Start an endpoint with deterministic TLS failures
     TlsEndpoint(commands::tls_endpoint::TlsEndpointArgs),
+
+    /// Pause, stop, kill, or restart Docker and Compose targets
+    Container(commands::container::ContainerArgs),
 }
 
 #[tokio::main]
@@ -252,6 +255,9 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::TlsEndpoint(args) => {
             commands::tls_endpoint::execute(args).await?;
+        }
+        Commands::Container(args) => {
+            commands::container::execute(args).await?;
         }
     }
 

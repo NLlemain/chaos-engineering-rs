@@ -13,7 +13,7 @@ Built in Rust for performance and safety. Test how your services handle real-wor
 
 - **🌐 Cross-Platform**: Windows, macOS, Linux with platform-native chaos injection and graceful cross-platform fallback
 - **⚡ High Performance**: Async Rust, ~15MB memory, <1% CPU overhead
-- **🎯 Honest Capability Registry**: 21 discoverable chaos types with stable, experimental, and planned status shown directly by `chaos list`
+- **🎯 Honest Capability Registry**: 22 discoverable chaos types with stable, experimental, and planned status shown directly by `chaos list`
 - **📋 YAML Configuration**: Declarative test scenarios with multi-phase support
 - **🖥️ Web Dashboard**: Dark-themed UI for test management and monitoring
 - **🔥 Load Testing**: Rate-limited concurrent load tests for HTTP/HTTPS APIs and HLS manifests
@@ -95,11 +95,21 @@ chaos tls-endpoint --mode incomplete-chain --domain localhost
 
 Point the resolver or TLS client at the printed local endpoint. DNS supports forwarding, selective delay, NXDOMAIN, spoofed IPv4/IPv6 answers, and blackholes. TLS supports expired and untrusted certificates, missing intermediates, delayed handshakes, and abrupt handshake closure. The endpoints are journaled and removed by `recover` or `stop-all` after interrupted runs.
 
-## 📦 Chaos Injectors (21 Total)
+### Disrupt Docker and Compose Targets
+
+```bash
+chaos container --id my-api --action pause --duration 30s
+chaos container --compose-service api --compose-file compose.yaml --action kill --duration 15s
+```
+
+Container IDs are resolved with Docker itself; Compose services resolve every current replica. Pause, stop, and kill operations record prior state in the recovery journal and restore it on cleanup. `restart` performs an immediate observable restart and does not invent a persistent fault.
+
+## 📦 Chaos Injectors (22 Total)
 
 | Injector | Category | Description | Status |
 |----------|----------|-------------|--------|
 | `dependency_proxy` | Network | Rootless directional TCP faults for any dependency | Stable |
+| `container_fault` | Container | Docker/Compose pause, stop, kill, restart, and restoration | Stable |
 | `network_latency` | Network | Native delay on Linux and Windows | Experimental |
 | `packet_loss` | Network | Native Linux packet loss | Experimental (Linux) |
 | `tcp_reset` | Network | Native Linux TCP termination | Experimental (Linux) |

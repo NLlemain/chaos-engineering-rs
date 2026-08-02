@@ -1,5 +1,6 @@
 pub mod ai_proxy;
 pub mod attach;
+pub mod container;
 pub mod dns_proxy;
 pub mod doctor;
 pub mod dry_run;

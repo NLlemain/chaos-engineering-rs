@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
+use std::{net::SocketAddr, path::PathBuf};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum Target {
@@ -11,6 +11,13 @@ pub enum Target {
 
     /// Target a container by ID
     Container { id: String },
+
+    /// Target every container currently backing a Docker Compose service
+    ComposeService {
+        service: String,
+        file: PathBuf,
+        project: Option<String>,
+    },
 
     /// Target a specific thread
     Thread { tid: u32 },
@@ -35,6 +42,18 @@ impl Target {
         Self::Container { id: id.into() }
     }
 
+    pub fn compose_service(
+        service: impl Into<String>,
+        file: impl Into<PathBuf>,
+        project: Option<String>,
+    ) -> Self {
+        Self::ComposeService {
+            service: service.into(),
+            file: file.into(),
+            project,
+        }
+    }
+
     pub fn thread(tid: u32) -> Self {
         Self::Thread { tid }
     }
@@ -54,6 +73,19 @@ impl Target {
             Target::Process { pid } => format!("Process PID {}", pid),
             Target::Network { address } => format!("Network {}", address),
             Target::Container { id } => format!("Container {}", id),
+            Target::ComposeService {
+                service,
+                file,
+                project,
+            } => format!(
+                "Compose service {} in {}{}",
+                service,
+                file.display(),
+                project
+                    .as_ref()
+                    .map(|name| format!(" (project {})", name))
+                    .unwrap_or_default()
+            ),
             Target::Thread { tid } => format!("Thread TID {}", tid),
             Target::ProcessPattern { pattern } => format!("Process pattern '{}'", pattern),
             Target::System => "System".to_string(),
@@ -82,8 +114,30 @@ impl Target {
                 tokio::net::TcpStream::connect(address).await.is_ok()
             }
             Target::Container { id } => {
-                // Check if container exists (simplified)
-                std::path::Path::new(&format!("/sys/fs/cgroup/docker/{}", id)).exists()
+                docker_succeeds(["inspect", "--type", "container", id]).await
+            }
+            Target::ComposeService {
+                service,
+                file,
+                project,
+            } => {
+                let mut args = vec![
+                    "compose".to_string(),
+                    "-f".to_string(),
+                    file.to_string_lossy().into_owned(),
+                ];
+                if let Some(project) = project {
+                    args.extend(["-p".to_string(), project.clone()]);
+                }
+                args.extend([
+                    "ps".to_string(),
+                    "--all".to_string(),
+                    "-q".to_string(),
+                    service.clone(),
+                ]);
+                docker_output(&args)
+                    .await
+                    .is_some_and(|output| !output.trim().is_empty())
             }
             Target::Thread { tid: _ } => {
                 #[cfg(unix)]
@@ -105,6 +159,25 @@ impl Target {
             Target::System => true,
         }
     }
+}
+
+async fn docker_succeeds<'a>(args: impl IntoIterator<Item = &'a str>) -> bool {
+    let args: Vec<_> = args.into_iter().map(str::to_string).collect();
+    docker_output(&args).await.is_some()
+}
+
+async fn docker_output(args: &[String]) -> Option<String> {
+    let output = tokio::process::Command::new(
+        std::env::var_os("CHAOS_DOCKER_BIN").unwrap_or_else(|| "docker".into()),
+    )
+    .args(args)
+    .output()
+    .await
+    .ok()?;
+    output
+        .status
+        .success()
+        .then(|| String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
 #[cfg(test)]

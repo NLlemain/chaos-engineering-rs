@@ -49,6 +49,12 @@ pub struct TargetConfig {
     #[serde(default)]
     pub container_id: Option<String>,
     #[serde(default)]
+    pub compose_service: Option<String>,
+    #[serde(default)]
+    pub compose_file: Option<std::path::PathBuf>,
+    #[serde(default)]
+    pub compose_project: Option<String>,
+    #[serde(default)]
     pub pattern: Option<String>,
     #[serde(default)]
     pub process_name: Option<String>,
@@ -62,6 +68,7 @@ impl TargetConfig {
             self.pid.is_some(),
             self.address.is_some(),
             self.container_id.is_some(),
+            self.compose_service.is_some(),
             self.pattern.is_some(),
             self.process_name.is_some(),
             self.system,
@@ -74,6 +81,12 @@ impl TargetConfig {
             return Err("Specify exactly one target field".to_string());
         }
 
+        if self.compose_service.is_none()
+            && (self.compose_file.is_some() || self.compose_project.is_some())
+        {
+            return Err("compose_file and compose_project require compose_service".to_string());
+        }
+
         if let Some(pid) = self.pid {
             Ok(chaos_core::Target::process(pid))
         } else if let Some(addr) = &self.address {
@@ -83,6 +96,14 @@ impl TargetConfig {
             Ok(chaos_core::Target::network(socket_addr))
         } else if let Some(id) = &self.container_id {
             Ok(chaos_core::Target::container(id.clone()))
+        } else if let Some(service) = &self.compose_service {
+            Ok(chaos_core::Target::compose_service(
+                service.clone(),
+                self.compose_file
+                    .clone()
+                    .unwrap_or_else(|| "compose.yaml".into()),
+                self.compose_project.clone(),
+            ))
         } else if let Some(pattern) = &self.pattern {
             Ok(chaos_core::Target::process_pattern(pattern.clone()))
         } else if let Some(process_name) = &self.process_name {
@@ -340,6 +361,23 @@ mod tests {
 
         let invalid = Scenario::builder().build();
         assert!(invalid.validate().is_err());
+    }
+
+    #[test]
+    fn compose_target_preserves_service_file_and_project() {
+        let target: TargetConfig = serde_json::from_value(serde_json::json!({
+            "compose_service": "api",
+            "compose_file": "deploy/compose.yaml",
+            "compose_project": "demo"
+        }))
+        .unwrap();
+        assert!(matches!(
+            target.to_target().unwrap(),
+            chaos_core::Target::ComposeService { service, file, project }
+                if service == "api"
+                    && file == std::path::Path::new("deploy/compose.yaml")
+                    && project.as_deref() == Some("demo")
+        ));
     }
 
     #[test]

@@ -1,7 +1,8 @@
 use crate::config::InjectionConfig;
 use anyhow::{anyhow, bail, Context, Result};
 use chaos_core::{
-    AiProvider, CpuStarvationConfig, CpuStarvationInjector, CryptoFaultConfig, CryptoFaultInjector,
+    AiProvider, ContainerFaultAction, ContainerFaultConfig, ContainerFaultInjector,
+    CpuStarvationConfig, CpuStarvationInjector, CryptoFaultConfig, CryptoFaultInjector,
     CryptoFaultType, DependencyProxyConfig, DependencyProxyInjector, DirectedToxic, DiskOperation,
     DiskSlowConfig, DiskSlowInjector, DnsFaultConfig, DnsFaultInjector, DnsFaultMode, DynInjector,
     HttpFaultConfig, HttpFaultInjector, HttpFaultType, MemoryPressureConfig,
@@ -95,6 +96,9 @@ pub fn build_injector(config: &InjectionConfig) -> Result<Option<DynInjector>> {
         "crypto_fault" => {
             build_crypto_fault(config).map(|injector| Some(Arc::new(injector) as DynInjector))
         }
+        "container_fault" => {
+            build_container_fault(config).map(|injector| Some(Arc::new(injector) as DynInjector))
+        }
         _ if parameters.is_empty() => Ok(None),
         _ => {
             let mut keys: Vec<_> = parameters.keys().cloned().collect();
@@ -106,6 +110,34 @@ pub fn build_injector(config: &InjectionConfig) -> Result<Option<DynInjector>> {
             )
         }
     }
+}
+
+fn build_container_fault(config: &InjectionConfig) -> Result<ContainerFaultInjector> {
+    let parameters = &config.parameters;
+    ensure_allowed(parameters, &["action", "stop_timeout_seconds"])?;
+    if !matches!(
+        config.target.to_target().map_err(anyhow::Error::msg)?,
+        Target::Container { .. } | Target::ComposeService { .. }
+    ) {
+        bail!("container_fault requires target.container_id or target.compose_service");
+    }
+    let action = match required_string(parameters, "action")?
+        .to_ascii_lowercase()
+        .as_str()
+    {
+        "pause" => ContainerFaultAction::Pause,
+        "stop" => ContainerFaultAction::Stop,
+        "kill" => ContainerFaultAction::Kill,
+        "restart" => ContainerFaultAction::Restart,
+        value => bail!(
+            "Parameter 'action' must be pause, stop, kill, or restart; got '{}'",
+            value
+        ),
+    };
+    Ok(ContainerFaultInjector::new(ContainerFaultConfig {
+        action,
+        stop_timeout_seconds: u64_value(parameters, "stop_timeout_seconds")?.unwrap_or(10),
+    }))
 }
 
 fn build_dns_fault(config: &InjectionConfig) -> Result<DnsFaultInjector> {
@@ -676,6 +708,18 @@ mod tests {
             for injection in scenario.phases.iter().flat_map(|phase| &phase.injections) {
                 assert!(build_injector(injection).unwrap().is_some());
             }
+        }
+    }
+
+    #[test]
+    fn bundled_container_pack_parses_and_builds() {
+        let scenario = crate::parse_scenario_from_str(
+            include_str!("../../scenario-packs/containers/compose-pause.yaml"),
+            "yaml",
+        )
+        .unwrap();
+        for injection in scenario.phases.iter().flat_map(|phase| &phase.injections) {
+            assert!(build_injector(injection).unwrap().is_some());
         }
     }
 }

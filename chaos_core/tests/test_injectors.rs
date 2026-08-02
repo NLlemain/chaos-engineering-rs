@@ -1,7 +1,7 @@
 use chaos_core::{Executor, InjectorRegistry, InjectorStatus, Target};
 
 #[tokio::test]
-async fn test_registry_contains_all_21_chaos_types() {
+async fn test_registry_contains_all_22_chaos_types() {
     let registry = InjectorRegistry::with_defaults();
     let injectors = registry.list();
 
@@ -27,12 +27,13 @@ async fn test_registry_contains_all_21_chaos_types() {
         "cloudflare_fault",
         "media_streaming_fault",
         "dependency_proxy",
+        "container_fault",
     ];
 
     assert_eq!(
         injectors.len(),
-        21,
-        "Expected exactly 21 registered chaos types, got {}",
+        22,
+        "Expected exactly 22 registered chaos types, got {}",
         injectors.len()
     );
 

@@ -2,6 +2,7 @@ pub mod aws_fault;
 pub mod azure_fault;
 pub mod clock_skew;
 pub mod cloudflare_fault;
+pub mod container_fault;
 pub mod cpu;
 pub mod crypto_fault;
 pub mod disk;
@@ -52,6 +53,7 @@ pub use aws_fault::*;
 pub use azure_fault::*;
 pub use clock_skew::*;
 pub use cloudflare_fault::*;
+pub use container_fault::*;
 pub use cpu::*;
 pub use crypto_fault::*;
 pub use disk::*;
@@ -154,11 +156,15 @@ impl InjectorRegistry {
         );
         registry.register("process_kill", Arc::new(ProcessKillInjector::default()));
         registry.register(
+            "container_fault",
+            Arc::new(ContainerFaultInjector::default()),
+        );
+        registry.register(
             "dependency_proxy",
             Arc::new(DependencyProxyInjector::default()),
         );
 
-        // Register expanded niche & cloud injectors (20 total)
+        // Register expanded niche and cloud injectors.
         registry.register("dns_fault", Arc::new(DnsFaultInjector::default()));
         registry.register("fd_exhaustion", Arc::new(FdExhaustionInjector::default()));
         registry.register("process_freeze", Arc::new(ProcessFreezeInjector::default()));
