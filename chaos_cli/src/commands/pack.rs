@@ -5,7 +5,7 @@ use colored::Colorize;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, path::PathBuf};
 
-const CATALOG_JSON: &str = include_str!("../../../scenario-packs/catalog.json");
+const CATALOG_JSON: &str = chaos_packs::CATALOG_JSON;
 
 #[derive(Debug, Args)]
 pub struct PackArgs {

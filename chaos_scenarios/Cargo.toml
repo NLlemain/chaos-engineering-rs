@@ -4,9 +4,16 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+description = "Declarative scenarios, SLO gates, and runners for chaos engineering"
+keywords = ["chaos-engineering", "resilience", "slo", "testing"]
+categories = ["development-tools::testing", "config", "asynchronous"]
 
 [dependencies]
-chaos_core = { path = "../chaos_core" }
+chaos_core = { version = "0.2.0", path = "../chaos_core" }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

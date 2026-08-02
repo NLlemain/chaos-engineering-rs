@@ -1,0 +1,91 @@
+name: Chaos Engineering SLO Gate
+description: Run a chaos-engineering-rs scenario and fail the job when its SLO gate fails.
+author: Ninian-Lemain
+
+branding:
+  icon: activity
+  color: red
+
+inputs:
+  scenario:
+    description: Path to a YAML, TOML, or JSON scenario in the caller repository.
+    required: true
+  version:
+    description: chaos-engineering-rs release tag to download.
+    required: false
+    default: v0.2.0
+  output:
+    description: JSON report path.
+    required: false
+    default: chaos-result.json
+  extra-args:
+    description: Additional trusted arguments passed to `chaos run`.
+    required: false
+    default: ""
+
+outputs:
+  report:
+    description: Path to the JSON report.
+    value: ${{ inputs.output }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install chaos on Unix
+      if: runner.os != 'Windows'
+      shell: bash
+      env:
+        CHAOS_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        case "${RUNNER_OS}-${RUNNER_ARCH}" in
+          Linux-X64) target="x86_64-unknown-linux-gnu" ;;
+          macOS-X64) target="x86_64-apple-darwin" ;;
+          macOS-ARM64) target="aarch64-apple-darwin" ;;
+          *) echo "Unsupported runner: ${RUNNER_OS}-${RUNNER_ARCH}" >&2; exit 1 ;;
+        esac
+        archive="chaos-${CHAOS_VERSION}-${target}.tar.gz"
+        url="https://github.com/Ninian-Lemain/chaos-engineering-rs/releases/download/${CHAOS_VERSION}/${archive}"
+        install_dir="${RUNNER_TEMP}/chaos-engineering-rs/bin"
+        mkdir -p "${install_dir}"
+        curl --fail --location --retry 3 "${url}" --output "${RUNNER_TEMP}/${archive}"
+        tar -xzf "${RUNNER_TEMP}/${archive}" -C "${install_dir}"
+        echo "${install_dir}" >> "${GITHUB_PATH}"
+
+    - name: Install chaos on Windows
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        CHAOS_VERSION: ${{ inputs.version }}
+      run: |
+        if ($env:RUNNER_ARCH -ne 'X64') {
+          throw "Unsupported Windows architecture: $env:RUNNER_ARCH"
+        }
+        $archive = "chaos-$env:CHAOS_VERSION-x86_64-pc-windows-msvc.zip"
+        $url = "https://github.com/Ninian-Lemain/chaos-engineering-rs/releases/download/$env:CHAOS_VERSION/$archive"
+        $installDir = Join-Path $env:RUNNER_TEMP 'chaos-engineering-rs\bin'
+        New-Item -ItemType Directory -Force -Path $installDir | Out-Null
+        Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile (Join-Path $env:RUNNER_TEMP $archive)
+        Expand-Archive -Force -Path (Join-Path $env:RUNNER_TEMP $archive) -DestinationPath $installDir
+        $installDir | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    - name: Run chaos SLO gate on Unix
+      if: runner.os != 'Windows'
+      shell: bash
+      env:
+        CHAOS_SCENARIO: ${{ inputs.scenario }}
+        CHAOS_OUTPUT: ${{ inputs.output }}
+        CHAOS_EXTRA_ARGS: ${{ inputs.extra-args }}
+      run: chaos run "${CHAOS_SCENARIO}" --output-json "${CHAOS_OUTPUT}" ${CHAOS_EXTRA_ARGS}
+
+    - name: Run chaos SLO gate on Windows
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        CHAOS_SCENARIO: ${{ inputs.scenario }}
+        CHAOS_OUTPUT: ${{ inputs.output }}
+        CHAOS_EXTRA_ARGS: ${{ inputs.extra-args }}
+      run: |
+        $extra = if ($env:CHAOS_EXTRA_ARGS) { $env:CHAOS_EXTRA_ARGS -split '\s+' } else { @() }
+        & chaos run $env:CHAOS_SCENARIO --output-json $env:CHAOS_OUTPUT @extra
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

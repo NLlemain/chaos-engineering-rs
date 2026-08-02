@@ -1,0 +1,17 @@
+[package]
+name = "chaos_packs"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme = "README.md"
+description = "Downloadable AI, media, database, queue, IoT, storage, auth, and Windows chaos scenarios"
+keywords = ["chaos-engineering", "resilience", "fault-injection", "scenarios"]
+categories = ["development-tools::testing", "config"]
+include = ["src/**", "catalog.json", "**/*.yaml", "**/*.md"]
+
+[dev-dependencies]
+serde_json = { workspace = true }

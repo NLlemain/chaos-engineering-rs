@@ -1,0 +1,6 @@
+.git
+.github
+target
+test_results
+*.log
+.env*

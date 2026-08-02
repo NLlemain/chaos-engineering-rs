@@ -1,0 +1,49 @@
+name: Publish crates.io
+
+on:
+  workflow_dispatch:
+    inputs:
+      execute:
+        description: Publish versioned crates permanently
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: inputs.execute
+    runs-on: ubuntu-latest
+    env:
+      CARGO_REGISTRIES_CRATES_IO_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal
+      - name: Require publishing credential
+        shell: bash
+        run: test -n "$CARGO_REGISTRIES_CRATES_IO_TOKEN"
+      - name: Publish independent crates
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo +stable publish --locked -p chaos_core
+          cargo +stable publish --locked -p chaos_packs
+          sleep 30
+      - name: Publish scenario and metrics crates
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo +stable publish --locked -p chaos_scenarios
+          sleep 30
+          cargo +stable publish --locked -p chaos_metrics
+          sleep 30
+      - name: Publish dashboard and CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo +stable publish --locked -p chaos_web
+          sleep 30
+          cargo +stable publish --locked -p chaos_cli

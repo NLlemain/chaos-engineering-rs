@@ -4,6 +4,13 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+description = "Cross-platform fault injectors and recovery primitives for chaos experiments"
+keywords = ["chaos-engineering", "resilience", "fault-injection", "testing"]
+categories = ["development-tools::testing", "asynchronous", "network-programming"]
 
 [dependencies]
 tokio = { workspace = true }

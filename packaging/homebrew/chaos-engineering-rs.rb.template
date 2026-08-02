@@ -1,0 +1,30 @@
+class ChaosEngineeringRs < Formula
+  desc "Cross-platform chaos engineering CLI with recovery and SLO gates"
+  homepage "https://github.com/Ninian-Lemain/chaos-engineering-rs"
+  version "__VERSION__"
+  license any_of: ["MIT", "Apache-2.0"]
+
+  on_macos do
+    on_arm do
+      url "https://github.com/Ninian-Lemain/chaos-engineering-rs/releases/download/__TAG__/chaos-__TAG__-aarch64-apple-darwin.tar.gz"
+      sha256 "__MACOS_ARM64_SHA256__"
+    end
+    on_intel do
+      url "https://github.com/Ninian-Lemain/chaos-engineering-rs/releases/download/__TAG__/chaos-__TAG__-x86_64-apple-darwin.tar.gz"
+      sha256 "__MACOS_X64_SHA256__"
+    end
+  end
+
+  on_linux do
+    url "https://github.com/Ninian-Lemain/chaos-engineering-rs/releases/download/__TAG__/chaos-__TAG__-x86_64-unknown-linux-gnu.tar.gz"
+    sha256 "__LINUX_X64_SHA256__"
+  end
+
+  def install
+    bin.install "chaos"
+  end
+
+  test do
+    assert_match version.to_s, shell_output("#{bin}/chaos --version")
+  end
+end

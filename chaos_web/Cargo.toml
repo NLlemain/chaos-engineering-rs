@@ -4,7 +4,13 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+rust-version.workspace = true
 description = "Web dashboard for chaos engineering framework"
+keywords = ["chaos-engineering", "resilience", "dashboard", "testing"]
+categories = ["development-tools::testing", "web-programming"]
 
 [dependencies]
 # Web framework
@@ -36,9 +42,9 @@ tracing = { workspace = true }
 chrono = { workspace = true }
 
 # Internal crates
-chaos_core = { path = "../chaos_core" }
-chaos_scenarios = { path = "../chaos_scenarios" }
-chaos_metrics = { path = "../chaos_metrics" }
+chaos_core = { version = "0.2.0", path = "../chaos_core" }
+chaos_scenarios = { version = "0.2.0", path = "../chaos_scenarios" }
+chaos_metrics = { version = "0.2.0", path = "../chaos_metrics" }
 
 [lib]
 name = "chaos_web"

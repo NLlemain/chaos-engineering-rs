@@ -4,16 +4,24 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+description = "Cross-platform chaos engineering CLI with recovery, SLO gates, and protocol packs"
+keywords = ["chaos-engineering", "resilience", "fault-injection", "cli", "testing"]
+categories = ["command-line-utilities", "development-tools::testing"]
 
 [[bin]]
 name = "chaos"
 path = "src/main.rs"
 
 [dependencies]
-chaos_core = { path = "../chaos_core" }
-chaos_scenarios = { path = "../chaos_scenarios" }
-chaos_metrics = { path = "../chaos_metrics" }
-chaos_web = { path = "../chaos_web" }
+chaos_core = { version = "0.2.0", path = "../chaos_core" }
+chaos_scenarios = { version = "0.2.0", path = "../chaos_scenarios" }
+chaos_metrics = { version = "0.2.0", path = "../chaos_metrics" }
+chaos_web = { version = "0.2.0", path = "../chaos_web" }
+chaos_packs = { version = "0.2.0", path = "../scenario-packs" }
 tokio = { workspace = true }
 clap = { workspace = true }
 colored = { workspace = true }

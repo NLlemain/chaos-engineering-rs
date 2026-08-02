@@ -62,7 +62,7 @@ async fn handle_connection(mut stream: TcpStream) -> anyhow::Result<()> {
                 }
 
                 // Also log every 1KB
-                if total_bytes.is_multiple_of(1024) {
+                if total_bytes % 1024 == 0 {
                     info!("{}: {} bytes echoed", peer_addr, total_bytes);
                 }
             }

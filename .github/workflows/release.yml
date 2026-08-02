@@ -1,0 +1,132 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  binaries:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            archive: tar
+          - runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive: zip
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+            archive: tar
+          - runner: macos-latest
+            target: aarch64-apple-darwin
+            archive: tar
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Rust
+        shell: bash
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup target add ${{ matrix.target }} --toolchain stable
+      - name: Build release binary
+        shell: bash
+        run: cargo +stable build --locked --release -p chaos_cli --target ${{ matrix.target }}
+      - name: Package Unix archive
+        if: matrix.archive == 'tar'
+        shell: bash
+        run: |
+          set -euo pipefail
+          name="chaos-${GITHUB_REF_NAME}-${{ matrix.target }}"
+          mkdir -p "stage" "dist"
+          cp "target/${{ matrix.target }}/release/chaos" stage/
+          cp README.md QUICKSTART.md LICENSE-MIT stage/
+          tar -C stage -czf "dist/${name}.tar.gz" .
+          sha256sum "dist/${name}.tar.gz" > "dist/${name}.tar.gz.sha256"
+      - name: Package Windows archive
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          $name = "chaos-$env:GITHUB_REF_NAME-${{ matrix.target }}"
+          New-Item -ItemType Directory -Force -Path stage, dist | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/chaos.exe" stage/
+          Copy-Item README.md, QUICKSTART.md, LICENSE-MIT stage/
+          Compress-Archive -Path stage/* -DestinationPath "dist/$name.zip"
+          $hash = (Get-FileHash "dist/$name.zip" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $name.zip" | Set-Content -NoNewline "dist/$name.zip.sha256"
+      - name: Sign build provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: dist/*
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub release
+    needs: binaries
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: dist
+      - name: Package scenario catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="chaos-scenario-packs-${GITHUB_REF_NAME}.tar.gz"
+          tar --exclude='scenario-packs/src' --exclude='scenario-packs/Cargo.toml' \
+            -czf "dist/${archive}" scenario-packs
+          sha256sum "dist/${archive}" > "dist/${archive}.sha256"
+      - name: Render package-manager manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          checksum() { awk '{print $1}' "dist/$1.sha256"; }
+          windows_sha="$(checksum "chaos-${GITHUB_REF_NAME}-x86_64-pc-windows-msvc.zip")"
+          linux_sha="$(checksum "chaos-${GITHUB_REF_NAME}-x86_64-unknown-linux-gnu.tar.gz")"
+          macos_x64_sha="$(checksum "chaos-${GITHUB_REF_NAME}-x86_64-apple-darwin.tar.gz")"
+          macos_arm64_sha="$(checksum "chaos-${GITHUB_REF_NAME}-aarch64-apple-darwin.tar.gz")"
+          sed \
+            -e "s/__VERSION__/${version}/g" \
+            -e "s/__TAG__/${GITHUB_REF_NAME}/g" \
+            -e "s/__WINDOWS_X64_SHA256__/${windows_sha}/g" \
+            packaging/winget/NinianLemain.ChaosEngineeringRs.yaml.template \
+            > dist/NinianLemain.ChaosEngineeringRs.yaml
+          sed \
+            -e "s/__VERSION__/${version}/g" \
+            -e "s/__TAG__/${GITHUB_REF_NAME}/g" \
+            -e "s/__LINUX_X64_SHA256__/${linux_sha}/g" \
+            -e "s/__MACOS_X64_SHA256__/${macos_x64_sha}/g" \
+            -e "s/__MACOS_ARM64_SHA256__/${macos_arm64_sha}/g" \
+            packaging/homebrew/chaos-engineering-rs.rb.template \
+            > dist/chaos-engineering-rs.rb
+      - name: Sign scenario-pack provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: dist/chaos-scenario-packs-*
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --generate-notes --title "chaos-engineering-rs $GITHUB_REF_NAME"
