@@ -63,7 +63,11 @@ impl Injector for CloudflareFaultInjector {
             "rate": self.config.rate,
         });
 
-        Ok(InjectionHandle::new("cloudflare_fault", target.clone(), metadata))
+        Ok(InjectionHandle::new(
+            "cloudflare_fault",
+            target.clone(),
+            metadata,
+        ))
     }
 
     async fn remove(&self, _handle: InjectionHandle) -> Result<()> {

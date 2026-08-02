@@ -79,7 +79,7 @@ pub async fn results_page(State(state): State<Arc<AppState>>) -> Html<String> {
     if let Ok(mut entries) = tokio::fs::read_dir(&state.config.results_dir).await {
         while let Ok(Some(entry)) = entries.next_entry().await {
             let path = entry.path();
-            if path.extension().map_or(false, |e| e == "json") {
+            if path.extension().is_some_and(|e| e == "json") {
                 if let Ok(content) = tokio::fs::read_to_string(&path).await {
                     if let Ok(result) =
                         serde_json::from_str::<chaos_scenarios::runner::ScenarioResult>(&content)
@@ -108,7 +108,7 @@ pub async fn results_page(State(state): State<Arc<AppState>>) -> Html<String> {
     }
 
     // Sort by timestamp descending
-    results.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+    results.sort_by_key(|result| std::cmp::Reverse(result.timestamp));
 
     Html(templates::results_page(&results))
 }
@@ -166,10 +166,7 @@ async fn load_scenarios(state: &AppState) -> Vec<ScenarioInfo> {
     if let Ok(mut entries) = tokio::fs::read_dir(&state.config.scenarios_dir).await {
         while let Ok(Some(entry)) = entries.next_entry().await {
             let path = entry.path();
-            if path
-                .extension()
-                .map_or(false, |e| e == "yaml" || e == "yml")
-            {
+            if path.extension().is_some_and(|e| e == "yaml" || e == "yml") {
                 if let Ok(content) = tokio::fs::read_to_string(&path).await {
                     if let Ok(scenario) = chaos_scenarios::parse_scenario(&content) {
                         let file_name = path

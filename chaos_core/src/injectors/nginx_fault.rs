@@ -61,7 +61,11 @@ impl Injector for NginxFaultInjector {
             "fault_mode": format!("{:?}", self.config.fault_mode),
         });
 
-        Ok(InjectionHandle::new("nginx_fault", target.clone(), metadata))
+        Ok(InjectionHandle::new(
+            "nginx_fault",
+            target.clone(),
+            metadata,
+        ))
     }
 
     async fn remove(&self, _handle: InjectionHandle) -> Result<()> {

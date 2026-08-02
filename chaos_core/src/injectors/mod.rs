@@ -117,7 +117,10 @@ impl InjectorRegistry {
         registry.register("aws_fault", Arc::new(AwsFaultInjector::default()));
         registry.register("crypto_fault", Arc::new(CryptoFaultInjector::default()));
         registry.register("azure_fault", Arc::new(AzureFaultInjector::default()));
-        registry.register("cloudflare_fault", Arc::new(CloudflareFaultInjector::default()));
+        registry.register(
+            "cloudflare_fault",
+            Arc::new(CloudflareFaultInjector::default()),
+        );
         registry.register(
             "media_streaming_fault",
             Arc::new(MediaStreamingFaultInjector::default()),

@@ -22,7 +22,9 @@ impl Default for SocketCorruptConfig {
     fn default() -> Self {
         Self {
             port: 8080,
-            corruption_mode: CorruptionMode::BitFlip { flip_probability: 0.01 },
+            corruption_mode: CorruptionMode::BitFlip {
+                flip_probability: 0.01,
+            },
             corruption_rate: 0.1,
         }
     }
@@ -49,7 +51,9 @@ impl SocketCorruptInjector {
 
     pub fn corrupt_bytes(&self, data: &mut [u8]) {
         match self.config.corruption_mode {
-            CorruptionMode::BitFlip { flip_probability: _ } => {
+            CorruptionMode::BitFlip {
+                flip_probability: _,
+            } => {
                 if !data.is_empty() {
                     data[0] ^= 0xFF; // Flip all bits of first byte
                 }
@@ -89,11 +93,18 @@ impl Injector for SocketCorruptInjector {
             "rate": self.config.corruption_rate,
         });
 
-        Ok(InjectionHandle::new("socket_corrupt", target.clone(), metadata))
+        Ok(InjectionHandle::new(
+            "socket_corrupt",
+            target.clone(),
+            metadata,
+        ))
     }
 
     async fn remove(&self, _handle: InjectionHandle) -> Result<()> {
-        info!("Removing Socket Payload Corruption on port {}", self.config.port);
+        info!(
+            "Removing Socket Payload Corruption on port {}",
+            self.config.port
+        );
         Ok(())
     }
 
@@ -145,7 +156,9 @@ mod tests {
     #[test]
     fn test_corrupt_bytes_bitflip() {
         let injector = SocketCorruptInjector::builder()
-            .corruption_mode(CorruptionMode::BitFlip { flip_probability: 1.0 })
+            .corruption_mode(CorruptionMode::BitFlip {
+                flip_probability: 1.0,
+            })
             .build();
         let mut buf = vec![0b00000000u8, 0b11111111u8];
         injector.corrupt_bytes(&mut buf);

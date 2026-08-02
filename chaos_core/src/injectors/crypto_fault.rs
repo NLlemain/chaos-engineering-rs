@@ -60,7 +60,11 @@ impl Injector for CryptoFaultInjector {
             "domain": self.config.target_cert_domain,
         });
 
-        Ok(InjectionHandle::new("crypto_fault", target.clone(), metadata))
+        Ok(InjectionHandle::new(
+            "crypto_fault",
+            target.clone(),
+            metadata,
+        ))
     }
 
     async fn remove(&self, _handle: InjectionHandle) -> Result<()> {

@@ -1,7 +1,6 @@
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tracing::{error, info, Level};
-use tracing_subscriber;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -63,7 +62,7 @@ async fn handle_connection(mut stream: TcpStream) -> anyhow::Result<()> {
                 }
 
                 // Also log every 1KB
-                if total_bytes % 1024 == 0 {
+                if total_bytes.is_multiple_of(1024) {
                     info!("{}: {} bytes echoed", peer_addr, total_bytes);
                 }
             }

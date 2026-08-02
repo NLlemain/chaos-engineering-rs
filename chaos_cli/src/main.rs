@@ -4,7 +4,6 @@ mod ui;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use tracing::Level;
-use tracing_subscriber;
 
 #[derive(Parser)]
 #[command(name = "chaos")]

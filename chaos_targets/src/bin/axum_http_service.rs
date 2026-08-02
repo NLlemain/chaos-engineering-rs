@@ -10,7 +10,6 @@ use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::RwLock;
 use tracing::{info, Level};
-use tracing_subscriber;
 
 #[derive(Clone)]
 struct AppState {
@@ -172,7 +171,7 @@ async fn cancel_order(
 
 async fn market_data() -> Json<Vec<MarketData>> {
     // Simulate real-time market data
-    let symbols = vec!["BTC/USD", "ETH/USD", "SOL/USD"];
+    let symbols = ["BTC/USD", "ETH/USD", "SOL/USD"];
     let data: Vec<MarketData> = symbols
         .iter()
         .map(|symbol| MarketData {

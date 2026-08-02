@@ -65,16 +65,9 @@ impl Default for ProcessKillConfig {
     }
 }
 
+#[derive(Default)]
 pub struct ProcessKillInjector {
     config: ProcessKillConfig,
-}
-
-impl Default for ProcessKillInjector {
-    fn default() -> Self {
-        Self {
-            config: ProcessKillConfig::default(),
-        }
-    }
 }
 
 impl ProcessKillInjector {
@@ -111,7 +104,7 @@ impl ProcessKillInjector {
             // Windows doesn't have Unix signals, use TerminateProcess
             if matches!(self.config.signal, Signal::SIGKILL) {
                 Command::new("taskkill")
-                    .args(&["/F", "/PID", &pid.to_string()])
+                    .args(["/F", "/PID", &pid.to_string()])
                     .output()
                     .await
                     .map_err(|e| {

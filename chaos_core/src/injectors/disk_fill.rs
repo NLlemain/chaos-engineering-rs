@@ -18,7 +18,7 @@ impl Default for DiskFillConfig {
         Self {
             target_path: std::env::temp_dir(),
             fill_size_bytes: 100 * 1024 * 1024, // 100MB
-            block_size_bytes: 1024 * 1024,       // 1MB
+            block_size_bytes: 1024 * 1024,      // 1MB
         }
     }
 }
@@ -64,15 +64,17 @@ impl Injector for DiskFillInjector {
         let path_clone = ballast_path.clone();
 
         tokio::task::spawn_blocking(move || -> Result<()> {
-            let mut file = File::create(&path_clone)
-                .map_err(|e| ChaosError::InjectionFailed(format!("Failed to create ballast file: {}", e)))?;
+            let mut file = File::create(&path_clone).map_err(|e| {
+                ChaosError::InjectionFailed(format!("Failed to create ballast file: {}", e))
+            })?;
             let buffer = vec![0u8; block_size];
             let mut written = 0u64;
 
             while written < fill_size {
                 let to_write = (fill_size - written).min(block_size as u64) as usize;
-                file.write_all(&buffer[..to_write])
-                    .map_err(|e| ChaosError::InjectionFailed(format!("Write error on ballast file: {}", e)))?;
+                file.write_all(&buffer[..to_write]).map_err(|e| {
+                    ChaosError::InjectionFailed(format!("Write error on ballast file: {}", e))
+                })?;
                 written += to_write as u64;
             }
             file.flush().ok();
@@ -94,8 +96,9 @@ impl Injector for DiskFillInjector {
             info!("Removing Disk Fill ballast file: {}", path_str);
             let path = PathBuf::from(path_str);
             if path.exists() {
-                fs::remove_file(path)
-                    .map_err(|e| ChaosError::CleanupFailed(format!("Failed to remove ballast file: {}", e)))?;
+                fs::remove_file(path).map_err(|e| {
+                    ChaosError::CleanupFailed(format!("Failed to remove ballast file: {}", e))
+                })?;
             }
         }
         Ok(())
@@ -147,7 +150,10 @@ mod tests {
         let handle = injector.inject(&target).await.unwrap();
         assert_eq!(handle.injector_name, "disk_fill");
 
-        let path_str = handle.metadata["ballast_path"].as_str().unwrap().to_string();
+        let path_str = handle.metadata["ballast_path"]
+            .as_str()
+            .unwrap()
+            .to_string();
         assert!(std::path::Path::new(&path_str).exists());
 
         injector.remove(handle).await.unwrap();

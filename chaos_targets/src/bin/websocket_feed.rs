@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tokio::time::interval;
 use tracing::{info, Level};
-use tracing_subscriber;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -113,10 +112,10 @@ async fn handle_socket(mut socket: WebSocket) {
                         info!("Client disconnected");
                         return;
                     }
-                    Ok(Message::Ping(_)) => {
-                        if socket.send(Message::Pong(vec![])).await.is_err() {
-                            return;
-                        }
+                    Ok(Message::Ping(_))
+                        if socket.send(Message::Pong(vec![])).await.is_err() =>
+                    {
+                        return;
                     }
                     _ => {}
                 }

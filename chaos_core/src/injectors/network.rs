@@ -59,17 +59,10 @@ impl Default for NetworkLatencyConfig {
     }
 }
 
+#[derive(Default)]
 pub struct NetworkLatencyInjector {
     #[allow(dead_code)]
     config: NetworkLatencyConfig,
-}
-
-impl Default for NetworkLatencyInjector {
-    fn default() -> Self {
-        Self {
-            config: NetworkLatencyConfig::default(),
-        }
-    }
 }
 
 impl NetworkLatencyInjector {
@@ -158,7 +151,7 @@ impl NetworkLatencyInjector {
         // For now, we'll use netsh interface to add latency via TCP settings
         // This is a real system-level change, not a simulation
         let output = Command::new("netsh")
-            .args(&[
+            .args([
                 "interface",
                 "tcp",
                 "set",
@@ -175,13 +168,7 @@ impl NetworkLatencyInjector {
             info!("netsh note: {}", stderr);
             // Try alternative approach using interface ipv4 settings
             let output2 = Command::new("netsh")
-                .args(&[
-                    "interface",
-                    "ipv4",
-                    "set",
-                    "global",
-                    &format!("taskoffload=disabled"),
-                ])
+                .args(["interface", "ipv4", "set", "global", "taskoffload=disabled"])
                 .output()
                 .await
                 .map_err(|e| {
@@ -327,7 +314,7 @@ impl NetworkLatencyInjector {
 
         // Reset TCP settings to defaults
         let _output = Command::new("netsh")
-            .args(&[
+            .args([
                 "interface",
                 "tcp",
                 "set",
@@ -340,7 +327,7 @@ impl NetworkLatencyInjector {
 
         // Re-enable task offload
         let _output = Command::new("netsh")
-            .args(&["interface", "ipv4", "set", "global", "taskoffload=enabled"])
+            .args(["interface", "ipv4", "set", "global", "taskoffload=enabled"])
             .output()
             .await;
 
@@ -463,17 +450,10 @@ impl Default for PacketLossConfig {
     }
 }
 
+#[derive(Default)]
 pub struct PacketLossInjector {
     #[allow(dead_code)]
     config: PacketLossConfig,
-}
-
-impl Default for PacketLossInjector {
-    fn default() -> Self {
-        Self {
-            config: PacketLossConfig::default(),
-        }
-    }
 }
 
 impl PacketLossInjector {

@@ -3,19 +3,10 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ProcessFreezeConfig {
     pub pid: Option<u32>,
     pub freeze_duration: Option<std::time::Duration>,
-}
-
-impl Default for ProcessFreezeConfig {
-    fn default() -> Self {
-        Self {
-            pid: None,
-            freeze_duration: None,
-        }
-    }
 }
 
 pub struct ProcessFreezeInjector {
@@ -54,8 +45,9 @@ impl Injector for ProcessFreezeInjector {
         {
             use nix::sys::signal::{kill, Signal};
             use nix::unistd::Pid;
-            kill(Pid::from_raw(pid as i32), Signal::SIGSTOP)
-                .map_err(|e| ChaosError::InjectionFailed(format!("Failed to send SIGSTOP: {}", e)))?;
+            kill(Pid::from_raw(pid as i32), Signal::SIGSTOP).map_err(|e| {
+                ChaosError::InjectionFailed(format!("Failed to send SIGSTOP: {}", e))
+            })?;
         }
 
         #[cfg(not(unix))]
@@ -68,7 +60,11 @@ impl Injector for ProcessFreezeInjector {
             "status": "frozen",
         });
 
-        Ok(InjectionHandle::new("process_freeze", target.clone(), metadata))
+        Ok(InjectionHandle::new(
+            "process_freeze",
+            target.clone(),
+            metadata,
+        ))
     }
 
     async fn remove(&self, handle: InjectionHandle) -> Result<()> {

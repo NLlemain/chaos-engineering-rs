@@ -61,7 +61,11 @@ impl Injector for FdExhaustionInjector {
             match File::create(&path) {
                 Ok(f) => opened.push(f),
                 Err(e) => {
-                    info!("FD Exhaustion limit reached after opening {} files: {}", opened.len(), e);
+                    info!(
+                        "FD Exhaustion limit reached after opening {} files: {}",
+                        opened.len(),
+                        e
+                    );
                     break;
                 }
             }
@@ -75,7 +79,11 @@ impl Injector for FdExhaustionInjector {
             "actual_opened_files": total_opened,
         });
 
-        Ok(InjectionHandle::new("fd_exhaustion", target.clone(), metadata))
+        Ok(InjectionHandle::new(
+            "fd_exhaustion",
+            target.clone(),
+            metadata,
+        ))
     }
 
     async fn remove(&self, _handle: InjectionHandle) -> Result<()> {

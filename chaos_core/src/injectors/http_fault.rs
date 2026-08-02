@@ -70,7 +70,10 @@ impl Injector for HttpFaultInjector {
     }
 
     async fn remove(&self, _handle: InjectionHandle) -> Result<()> {
-        info!("Removing HTTP Fault on path pattern '{}'", self.config.path_pattern);
+        info!(
+            "Removing HTTP Fault on path pattern '{}'",
+            self.config.path_pattern
+        );
         Ok(())
     }
 

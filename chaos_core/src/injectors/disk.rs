@@ -28,17 +28,10 @@ impl Default for DiskSlowConfig {
     }
 }
 
+#[derive(Default)]
 pub struct DiskSlowInjector {
     #[allow(dead_code)]
     config: DiskSlowConfig,
-}
-
-impl Default for DiskSlowInjector {
-    fn default() -> Self {
-        Self {
-            config: DiskSlowConfig::default(),
-        }
-    }
 }
 
 impl DiskSlowInjector {

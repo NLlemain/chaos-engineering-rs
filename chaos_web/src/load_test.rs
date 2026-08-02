@@ -85,6 +85,12 @@ pub struct LoadTestState {
     pub errors: RwLock<Vec<String>>,
 }
 
+impl Default for LoadTestState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LoadTestState {
     pub fn new() -> Self {
         Self {

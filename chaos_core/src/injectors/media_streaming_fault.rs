@@ -63,7 +63,11 @@ impl Injector for MediaStreamingFaultInjector {
             "stream_id": self.config.stream_id,
         });
 
-        Ok(InjectionHandle::new("media_streaming_fault", target.clone(), metadata))
+        Ok(InjectionHandle::new(
+            "media_streaming_fault",
+            target.clone(),
+            metadata,
+        ))
     }
 
     async fn remove(&self, _handle: InjectionHandle) -> Result<()> {
@@ -98,9 +102,9 @@ impl MediaStreamingFaultBuilder {
 
     pub fn build(self) -> MediaStreamingFaultInjector {
         MediaStreamingFaultInjector::new(MediaStreamingFaultConfig {
-            fault_type: self.fault_type.unwrap_or(MediaFaultType::BitrateThrottleKbps {
-                max_kbps: 256,
-            }),
+            fault_type: self
+                .fault_type
+                .unwrap_or(MediaFaultType::BitrateThrottleKbps { max_kbps: 256 }),
             stream_id: self
                 .stream_id
                 .unwrap_or_else(|| "default_stream".to_string()),

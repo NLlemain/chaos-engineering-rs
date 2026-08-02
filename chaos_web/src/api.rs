@@ -62,10 +62,7 @@ pub async fn list_scenarios(
 
     while let Ok(Some(entry)) = entries.next_entry().await {
         let path = entry.path();
-        if path
-            .extension()
-            .map_or(false, |e| e == "yaml" || e == "yml")
-        {
+        if path.extension().is_some_and(|e| e == "yaml" || e == "yml") {
             if let Ok(content) = tokio::fs::read_to_string(&path).await {
                 if let Ok(scenario) = chaos_scenarios::parse_scenario(&content) {
                     let file_name = path
@@ -294,7 +291,7 @@ pub async fn list_results(
     if let Ok(mut entries) = tokio::fs::read_dir(&state.config.results_dir).await {
         while let Ok(Some(entry)) = entries.next_entry().await {
             let path = entry.path();
-            if path.extension().map_or(false, |e| e == "json") {
+            if path.extension().is_some_and(|e| e == "json") {
                 if let Ok(content) = tokio::fs::read_to_string(&path).await {
                     if let Ok(result) =
                         serde_json::from_str::<chaos_scenarios::runner::ScenarioResult>(&content)
@@ -323,7 +320,7 @@ pub async fn list_results(
     }
 
     // Sort by timestamp descending
-    results.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+    results.sort_by_key(|result| std::cmp::Reverse(result.timestamp));
 
     Ok(Json(results))
 }

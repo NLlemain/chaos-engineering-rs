@@ -95,9 +95,7 @@ impl AwsFaultBuilder {
 
     pub fn build(self) -> AwsFaultInjector {
         AwsFaultInjector::new(AwsFaultConfig {
-            service_fault: self
-                .service_fault
-                .unwrap_or(AwsServiceFault::S3SlowDown503),
+            service_fault: self.service_fault.unwrap_or(AwsServiceFault::S3SlowDown503),
             rate: self.rate.unwrap_or(1.0),
         })
     }

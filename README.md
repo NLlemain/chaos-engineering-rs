@@ -1,8 +1,9 @@
 # 🦀 Chaos Engineering Framework
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE-MIT)
-[![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org)
+[![Rust](https://img.shields.io/badge/rust-stable-orange.svg)](https://www.rust-lang.org)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/NLlemain/chaos-engineering-rs)
+[![CI](https://github.com/NLlemain/chaos-engineering-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/NLlemain/chaos-engineering-rs/actions/workflows/ci.yml)
 
 **A lightweight, cross-platform chaos engineering framework for testing service resilience through controlled failure injection.**
 
@@ -15,15 +16,15 @@ Built in Rust for performance and safety. Test how your services handle real-wor
 - **🎯 20 Chaos Types**: Network latency, packet loss, TCP resets, CPU starvation, memory pressure, disk I/O, process kills, DNS faults, FD exhaustion, process freeze, clock skew, disk space fill, socket payload corruption, HTTP/L7 faults, Nginx proxy faults, AWS cloud faults, Azure cloud faults, Cloudflare edge faults, media streaming faults, crypto/security faults
 - **📋 YAML Configuration**: Declarative test scenarios with multi-phase support
 - **🖥️ Web Dashboard**: Dark-themed UI for test management and monitoring
-- **🔥 Load Testing**: Stress test HTTP, WebSocket, TCP, gRPC, HLS, RTMP endpoints
-- **📊 Multiple Outputs**: CLI, JSON, Markdown, Prometheus metrics
-- **🛡️ Safe by Design**: Input validation, no shell injection, clear privilege separation
+- **🔥 Load Testing**: Rate-limited concurrent load tests for HTTP/HTTPS APIs and HLS manifests
+- **📊 Multiple Outputs**: CLI, JSON, Markdown, and HTML reports
+- **🛡️ Guardrails**: Configuration validation, explicit destructive-operation warnings, and clear privilege separation
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- **Rust 1.70+** - [Install Rust](https://www.rust-lang.org/tools/install)
+- **Latest stable Rust** - [Install Rust](https://www.rust-lang.org/tools/install)
 - **Windows**: Native support with OS level process & resource handles
 - **Linux**: `iproute2`, `iptables` (usually pre-installed)
 - **macOS**: Built-in tools, requires sudo for network chaos
@@ -84,7 +85,7 @@ Modern dark-themed web interface for chaos engineering:
 
 - **Dashboard**: Real-time test status, system overview
 - **Scenarios**: Browse and run YAML test scenarios
-- **Load Testing**: Stress test any HTTP/WebSocket/TCP/Media endpoint
+- **Load Testing**: Stress test HTTP/HTTPS APIs and HLS manifests
 - **Targets**: Save and manage your test endpoints
 - **Results**: View test history with detailed metrics
 
@@ -94,7 +95,7 @@ Go to **Load Test** page and configure:
 
 | Field | Description |
 |-------|-------------|
-| Target Type | HTTP, WebSocket, TCP, gRPC, HLS, RTMP |
+| Target Type | HTTP/HTTPS or HLS |
 | URL | Your endpoint (e.g., `http://localhost:3000/api`) |
 | Concurrent Users | Parallel connections |
 | Requests/Second | Target throughput |
@@ -103,11 +104,7 @@ Go to **Load Test** page and configure:
 
 **Supported Protocols:**
 - **HTTP/HTTPS** - REST APIs, web apps
-- **WebSocket** - Real-time feeds, chat
-- **TCP** - Raw socket connections
-- **gRPC** - gRPC services
 - **HLS** - HTTP Live Streaming
-- **RTMP** - Video streaming servers
 
 ## 📝 Test Scenarios
 
@@ -223,7 +220,7 @@ chaos-engineering-rs/
 ## 🛡️ Safety
 
 - **Input Validation**: All configs validated before execution
-- **No Shell Injection**: Uses safe Rust `Command` API
+- **Explicit Risk Controls**: Destructive operations require opt-in configuration
 - **Privilege Separation**: Clear user/root boundaries
 - **Audit Logging**: All actions logged with timestamps
 

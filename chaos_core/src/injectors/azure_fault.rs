@@ -21,7 +21,9 @@ pub struct AzureFaultConfig {
 impl Default for AzureFaultConfig {
     fn default() -> Self {
         Self {
-            service_fault: AzureServiceFault::ArmRateLimit429 { retry_after_secs: 30 },
+            service_fault: AzureServiceFault::ArmRateLimit429 {
+                retry_after_secs: 30,
+            },
             resource_group: "rg-prod".to_string(),
             rate: 1.0,
         }
@@ -62,7 +64,11 @@ impl Injector for AzureFaultInjector {
             "rate": self.config.rate,
         });
 
-        Ok(InjectionHandle::new("azure_fault", target.clone(), metadata))
+        Ok(InjectionHandle::new(
+            "azure_fault",
+            target.clone(),
+            metadata,
+        ))
     }
 
     async fn remove(&self, _handle: InjectionHandle) -> Result<()> {

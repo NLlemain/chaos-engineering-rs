@@ -539,7 +539,10 @@ pub fn dashboard_page(
             )
         }).collect();
 
-        format!(r#"<div class="table-container"><table><thead><tr><th>Scenario</th><th>Success Rate</th><th>Duration</th><th>Time</th></tr></thead><tbody>{}</tbody></table></div>"#, rows)
+        format!(
+            r#"<div class="table-container"><table><thead><tr><th>Scenario</th><th>Success Rate</th><th>Duration</th><th>Time</th></tr></thead><tbody>{}</tbody></table></div>"#,
+            rows
+        )
     };
 
     let content = format!(
@@ -547,7 +550,11 @@ pub fn dashboard_page(
         status_html = status_html,
         total_scenarios = total_scenarios,
         total_results = total_results,
-        status_badge = if status.is_running { r#"<span class="live-indicator"><span class="live-dot"></span> Running</span>"# } else { r#"<span class="badge badge-neutral">Idle</span>"# },
+        status_badge = if status.is_running {
+            r#"<span class="live-indicator"><span class="live-dot"></span> Running</span>"#
+        } else {
+            r#"<span class="badge badge-neutral">Idle</span>"#
+        },
         results_html = results_html
     );
 
@@ -571,30 +578,69 @@ pub fn scenarios_page(scenarios: &[ScenarioInfo]) -> String {
         }).collect::<Vec<_>>().join("\n")
     };
 
-    let content = format!(r#"<div class="page-header"><div><div class="hero-kicker">Scenario library</div><h1 class="page-title">Scenarios</h1><p class="page-subtitle">Browse and run chaos test scenarios.</p></div></div><div class="grid grid-3">{scenarios_html}</div>"#, scenarios_html = scenarios_html);
+    let content = format!(
+        r#"<div class="page-header"><div><div class="hero-kicker">Scenario library</div><h1 class="page-title">Scenarios</h1><p class="page-subtitle">Browse and run chaos test scenarios.</p></div></div><div class="grid grid-3">{scenarios_html}</div>"#,
+        scenarios_html = scenarios_html
+    );
     base_layout("Scenarios", &content)
 }
 
-pub fn scenario_detail_page(scenario: &ScenarioInfo, yaml_content: &str, phases: &[PhaseInfo]) -> String {
+pub fn scenario_detail_page(
+    scenario: &ScenarioInfo,
+    yaml_content: &str,
+    phases: &[PhaseInfo],
+) -> String {
     let phases_html: String = phases.iter().map(|p| {
         let injections = p.injections.iter().map(|i| format!(r#"<span class="badge badge-info">{}</span>"#, escape_html(i))).collect::<Vec<_>>().join(" ");
         format!(r#"<div class="timeline-item"><h4 class="timeline-title">{}</h4><p class="timeline-content">Duration: {}</p><div class="mt-1">{}</div></div>"#, escape_html(&p.name), p.duration, injections)
     }).collect();
 
-    let content = format!(r#"<div class="page-header"><div><div class="hero-kicker">Scenario detail</div><h1 class="page-title">{}</h1><p class="page-subtitle">{}</p></div><button class="btn btn-primary btn-lg" onclick="runScenario('{}')">▶️ Run Test</button></div><div class="grid grid-2"><div class="card"><div class="card-header"><h2 class="card-title">Phases</h2></div><div class="card-body"><div class="timeline">{}</div></div></div><div class="card"><div class="card-header"><h2 class="card-title">Scenario Configuration</h2></div><div class="card-body"><div class="code-block"><code><pre>{}</pre></code></div></div></div></div>"#, escape_html(&scenario.name), escape_html(scenario.description.as_deref().unwrap_or("No description")), scenario.file_name, phases_html, escape_html(yaml_content));
+    let content = format!(
+        r#"<div class="page-header"><div><div class="hero-kicker">Scenario detail</div><h1 class="page-title">{}</h1><p class="page-subtitle">{}</p></div><button class="btn btn-primary btn-lg" onclick="runScenario('{}')">▶️ Run Test</button></div><div class="grid grid-2"><div class="card"><div class="card-header"><h2 class="card-title">Phases</h2></div><div class="card-body"><div class="timeline">{}</div></div></div><div class="card"><div class="card-header"><h2 class="card-title">Scenario Configuration</h2></div><div class="card-body"><div class="code-block"><code><pre>{}</pre></code></div></div></div></div>"#,
+        escape_html(&scenario.name),
+        escape_html(scenario.description.as_deref().unwrap_or("No description")),
+        scenario.file_name,
+        phases_html,
+        escape_html(yaml_content)
+    );
     base_layout(&scenario.name, &content)
 }
 
 pub fn run_page(scenarios: &[ScenarioInfo], status: &crate::state::TestStatus) -> String {
-    let options = scenarios.iter().map(|s| format!(r#"<option value="{}">{} ({})</option>"#, s.file_name, escape_html(&s.name), s.duration)).collect::<Vec<_>>().join("\n");
+    let options = scenarios
+        .iter()
+        .map(|s| {
+            format!(
+                r#"<option value="{}">{} ({})</option>"#,
+                s.file_name,
+                escape_html(&s.name),
+                s.duration
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
 
     let status_section = if status.is_running {
-        format!(r#"<div class="alert alert-info mb-4"><span class="live-indicator"><span class="live-dot"></span> Test in progress</span></div><div class="card"><div class="card-header"><h2 class="card-title">Current Test: {}</h2><button class="btn btn-danger" onclick="stopTest()">Stop Test</button></div><div class="card-body"><p class="mb-2"><strong>Phase:</strong> <span id="current-phase">{}</span></p><div class="progress-container"><div class="progress-bar" id="progress-bar" style="width: {}%"></div></div><p class="text-secondary" id="progress-text">{:.1}% complete - {} / {} seconds elapsed</p></div></div>"#, escape_html(status.scenario_name.as_deref().unwrap_or("Unknown")), escape_html(status.current_phase.as_deref().unwrap_or("Starting...")), status.progress_percent, status.progress_percent, status.elapsed_seconds, status.total_seconds)
+        format!(
+            r#"<div class="alert alert-info mb-4"><span class="live-indicator"><span class="live-dot"></span> Test in progress</span></div><div class="card"><div class="card-header"><h2 class="card-title">Current Test: {}</h2><button class="btn btn-danger" onclick="stopTest()">Stop Test</button></div><div class="card-body"><p class="mb-2"><strong>Phase:</strong> <span id="current-phase">{}</span></p><div class="progress-container"><div class="progress-bar" id="progress-bar" style="width: {}%"></div></div><p class="text-secondary" id="progress-text">{:.1}% complete - {} / {} seconds elapsed</p></div></div>"#,
+            escape_html(status.scenario_name.as_deref().unwrap_or("Unknown")),
+            escape_html(status.current_phase.as_deref().unwrap_or("Starting...")),
+            status.progress_percent,
+            status.progress_percent,
+            status.elapsed_seconds,
+            status.total_seconds
+        )
     } else {
-        format!(r#"<div class="card"><div class="card-header"><h2 class="card-title">Run New Test</h2></div><div class="card-body"><form id="run-form" onsubmit="event.preventDefault(); runScenario(document.getElementById('scenario-select').value);"><div class="form-group"><label class="form-label" for="scenario-select">Select Scenario</label><select id="scenario-select" class="form-select">{}</select></div><button type="submit" class="btn btn-primary btn-lg">▶️ Start Test</button></form></div></div>"#, options)
+        format!(
+            r#"<div class="card"><div class="card-header"><h2 class="card-title">Run New Test</h2></div><div class="card-body"><form id="run-form" onsubmit="event.preventDefault(); runScenario(document.getElementById('scenario-select').value);"><div class="form-group"><label class="form-label" for="scenario-select">Select Scenario</label><select id="scenario-select" class="form-select">{}</select></div><button type="submit" class="btn btn-primary btn-lg">▶️ Start Test</button></form></div></div>"#,
+            options
+        )
     };
 
-    let content = format!(r#"<div class="page-header"><div><div class="hero-kicker">Execution</div><h1 class="page-title">Run Chaos Test</h1><p class="page-subtitle">Execute chaos engineering scenarios.</p></div></div>{}"#, status_section);
+    let content = format!(
+        r#"<div class="page-header"><div><div class="hero-kicker">Execution</div><h1 class="page-title">Run Chaos Test</h1><p class="page-subtitle">Execute chaos engineering scenarios.</p></div></div>{}"#,
+        status_section
+    );
     base_layout("Run Test", &content)
 }
 
@@ -606,35 +652,98 @@ pub fn results_page(results: &[crate::state::ResultSummary]) -> String {
             let success_class = if r.success_rate >= 0.9 { "badge-success" } else if r.success_rate >= 0.7 { "badge-warning" } else { "badge-danger" };
             format!(r#"<tr onclick="window.location='/results/{}'" style="cursor:pointer"><td><strong>{}</strong></td><td><span class="badge {}">{:.1}%</span></td><td>{}s</td><td>{}</td><td><a href="/results/{}" class="btn btn-secondary btn-sm">View</a></td></tr>"#, r.id, escape_html(&r.scenario_name), success_class, r.success_rate * 100.0, r.total_duration_secs, r.timestamp.format("%Y-%m-%d %H:%M:%S"), r.id)
         }).collect();
-        format!(r#"<div class="table-container"><table><thead><tr><th>Scenario</th><th>Success Rate</th><th>Duration</th><th>Timestamp</th><th>Actions</th></tr></thead><tbody>{}</tbody></table></div>"#, rows)
+        format!(
+            r#"<div class="table-container"><table><thead><tr><th>Scenario</th><th>Success Rate</th><th>Duration</th><th>Timestamp</th><th>Actions</th></tr></thead><tbody>{}</tbody></table></div>"#,
+            rows
+        )
     };
 
-    let content = format!(r#"<div class="page-header"><div><div class="hero-kicker">History</div><h1 class="page-title">Test Results</h1><p class="page-subtitle">View historical chaos test results.</p></div></div>{}"#, results_html);
+    let content = format!(
+        r#"<div class="page-header"><div><div class="hero-kicker">History</div><h1 class="page-title">Test Results</h1><p class="page-subtitle">View historical chaos test results.</p></div></div>{}"#,
+        results_html
+    );
     base_layout("Results", &content)
 }
 
 pub fn result_detail_page(result: &chaos_scenarios::runner::ScenarioResult) -> String {
-    let success_class = if result.success_rate() >= 0.9 { "text-success" } else if result.success_rate() >= 0.7 { "text-warning" } else { "text-danger" };
+    let success_class = if result.success_rate() >= 0.9 {
+        "text-success"
+    } else if result.success_rate() >= 0.7 {
+        "text-warning"
+    } else {
+        "text-danger"
+    };
     let phases_html: String = result.phase_results.iter().map(|p| format!(r#"<div class="timeline-item completed"><h4 class="timeline-title">{}</h4><p class="timeline-content">Duration: {:?} | Injections: {}</p></div>"#, escape_html(&p.name), p.duration, p.injection_count)).collect();
-    let content = format!(r#"<div class="page-header"><div><div class="hero-kicker">Completed</div><h1 class="page-title">{}</h1><p class="page-subtitle">Test completed.</p></div><a href="/results" class="btn btn-secondary">← Back to Results</a></div><div class="grid grid-4 mb-4"><div class="stat-card"><span class="stat-icon">⏱️</span><span class="stat-value">{}s</span><span class="stat-label">Duration</span></div><div class="stat-card"><span class="stat-icon">📊</span><span class="stat-value {}">{:.1}%</span><span class="stat-label">Success Rate</span></div><div class="stat-card"><span class="stat-icon">⚡</span><span class="stat-value">{}</span><span class="stat-label">Injections</span></div><div class="stat-card"><span class="stat-icon">📋</span><span class="stat-value">{}</span><span class="stat-label">Phases</span></div></div><div class="card"><div class="card-header"><h2 class="card-title">Phase Timeline</h2></div><div class="card-body"><div class="timeline">{}</div></div></div>"#, escape_html(&result.scenario_name), result.total_duration.as_secs(), success_class, result.success_rate() * 100.0, result.total_injections, result.phase_results.len(), phases_html);
+    let content = format!(
+        r#"<div class="page-header"><div><div class="hero-kicker">Completed</div><h1 class="page-title">{}</h1><p class="page-subtitle">Test completed.</p></div><a href="/results" class="btn btn-secondary">← Back to Results</a></div><div class="grid grid-4 mb-4"><div class="stat-card"><span class="stat-icon">⏱️</span><span class="stat-value">{}s</span><span class="stat-label">Duration</span></div><div class="stat-card"><span class="stat-icon">📊</span><span class="stat-value {}">{:.1}%</span><span class="stat-label">Success Rate</span></div><div class="stat-card"><span class="stat-icon">⚡</span><span class="stat-value">{}</span><span class="stat-label">Injections</span></div><div class="stat-card"><span class="stat-icon">📋</span><span class="stat-value">{}</span><span class="stat-label">Phases</span></div></div><div class="card"><div class="card-header"><h2 class="card-title">Phase Timeline</h2></div><div class="card-body"><div class="timeline">{}</div></div></div>"#,
+        escape_html(&result.scenario_name),
+        result.total_duration.as_secs(),
+        success_class,
+        result.success_rate() * 100.0,
+        result.total_injections,
+        result.phase_results.len(),
+        phases_html
+    );
     base_layout(&result.scenario_name, &content)
 }
 
 pub fn error_page(title: &str, message: &str) -> String {
-    let content = format!(r#"<div class="empty-state"><div class="empty-state-icon">❌</div><p class="empty-state-title">{}</p><p>{}</p><a href="/" class="btn btn-primary mt-3">← Back to Dashboard</a></div>"#, escape_html(title), escape_html(message));
+    let content = format!(
+        r#"<div class="empty-state"><div class="empty-state-icon">❌</div><p class="empty-state-title">{}</p><p>{}</p><a href="/" class="btn btn-primary mt-3">← Back to Dashboard</a></div>"#,
+        escape_html(title),
+        escape_html(message)
+    );
     base_layout("Error", &content)
 }
 
-pub fn load_test_page(targets: &[crate::state::CustomTarget], is_running: bool, metrics: &crate::load_test::LoadTestMetrics) -> String {
-    let target_options = targets.iter().map(|t| format!(r#"<option value="{}">{} ({})</option>"#, escape_html(&t.url), escape_html(&t.name), escape_html(&t.target_type))).collect::<Vec<_>>().join("\n");
+pub fn load_test_page(
+    targets: &[crate::state::CustomTarget],
+    is_running: bool,
+    metrics: &crate::load_test::LoadTestMetrics,
+) -> String {
+    let target_options = targets
+        .iter()
+        .filter(|target| matches!(target.target_type.as_str(), "http" | "hls"))
+        .map(|t| {
+            format!(
+                r#"<option value="{}">{} ({})</option>"#,
+                escape_html(&t.url),
+                escape_html(&t.name),
+                escape_html(&t.target_type)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
 
     let status_section = if is_running {
-        format!(r#"<div class="alert alert-info mb-4"><span class="live-indicator"><span class="live-dot"></span> Load test in progress</span></div><div class="grid grid-4 mb-4"><div class="stat-card"><span class="stat-icon">📊</span><span class="stat-value">{}</span><span class="stat-label">Total Requests</span></div><div class="stat-card"><span class="stat-icon">✅</span><span class="stat-value text-success">{}</span><span class="stat-label">Successful</span></div><div class="stat-card"><span class="stat-icon">❌</span><span class="stat-value text-danger">{}</span><span class="stat-label">Failed</span></div><div class="stat-card"><span class="stat-icon">⚡</span><span class="stat-value">{:.1}</span><span class="stat-label">Req/sec</span></div></div><div class="grid grid-3 mb-4"><div class="stat-card"><span class="stat-icon">🕐</span><span class="stat-value">{:.1}ms</span><span class="stat-label">Avg Latency</span></div><div class="stat-card"><span class="stat-icon">📈</span><span class="stat-value">{:.1}ms</span><span class="stat-label">P95 Latency</span></div><div class="stat-card"><span class="stat-icon">📉</span><span class="stat-value">{:.1}ms</span><span class="stat-label">P99 Latency</span></div></div><button class="btn btn-danger btn-lg" onclick="stopLoadTest()">⏹️ Stop Test</button>"#, metrics.total_requests, metrics.successful_requests, metrics.failed_requests, metrics.requests_per_second, metrics.avg_latency_ms, metrics.p95_latency_ms, metrics.p99_latency_ms)
+        format!(
+            r#"<div class="alert alert-info mb-4"><span class="live-indicator"><span class="live-dot"></span> Load test in progress</span></div><div class="grid grid-4 mb-4"><div class="stat-card"><span class="stat-icon">📊</span><span class="stat-value">{}</span><span class="stat-label">Total Requests</span></div><div class="stat-card"><span class="stat-icon">✅</span><span class="stat-value text-success">{}</span><span class="stat-label">Successful</span></div><div class="stat-card"><span class="stat-icon">❌</span><span class="stat-value text-danger">{}</span><span class="stat-label">Failed</span></div><div class="stat-card"><span class="stat-icon">⚡</span><span class="stat-value">{:.1}</span><span class="stat-label">Req/sec</span></div></div><div class="grid grid-3 mb-4"><div class="stat-card"><span class="stat-icon">🕐</span><span class="stat-value">{:.1}ms</span><span class="stat-label">Avg Latency</span></div><div class="stat-card"><span class="stat-icon">📈</span><span class="stat-value">{:.1}ms</span><span class="stat-label">P95 Latency</span></div><div class="stat-card"><span class="stat-icon">📉</span><span class="stat-value">{:.1}ms</span><span class="stat-label">P99 Latency</span></div></div><button class="btn btn-danger btn-lg" onclick="stopLoadTest()">⏹️ Stop Test</button>"#,
+            metrics.total_requests,
+            metrics.successful_requests,
+            metrics.failed_requests,
+            metrics.requests_per_second,
+            metrics.avg_latency_ms,
+            metrics.p95_latency_ms,
+            metrics.p99_latency_ms
+        )
     } else {
-        format!(r#"<div class="card"><div class="card-header"><h2 class="card-title">Configure Load Test</h2></div><div class="card-body"><form id="load-test-form" onsubmit="event.preventDefault(); startLoadTest();"><div class="grid grid-2"><div class="form-group"><label class="form-label">Test Name</label><input type="text" id="test-name" class="form-input" value="My Load Test" required></div><div class="form-group"><label class="form-label">Target Type</label><select id="target-type" class="form-select"><option value="http">HTTP/HTTPS API</option><option value="websocket">WebSocket</option><option value="tcp">TCP Socket</option><option value="grpc">gRPC</option><option value="hls">HLS Stream</option><option value="rtmp">RTMP Stream</option></select></div></div><div class="form-group"><label class="form-label">Target URL</label><input type="text" id="target-url" class="form-input" placeholder="http://localhost:3000/api/endpoint" required>{}</div><div class="form-group"><label class="form-label">HTTP Method</label><select id="http-method" class="form-select"><option value="GET">GET</option><option value="POST">POST</option><option value="PUT">PUT</option><option value="DELETE">DELETE</option><option value="PATCH">PATCH</option></select></div><div class="form-group"><label class="form-label">Request Body (JSON)</label><textarea id="request-body" class="form-textarea" placeholder='{{"key": "value"}}'></textarea></div><div class="grid grid-4"><div class="form-group"><label class="form-label">Concurrent Users</label><input type="number" id="concurrent-users" class="form-input" value="10" min="1" max="1000"></div><div class="form-group"><label class="form-label">Requests/Second</label><input type="number" id="rps" class="form-input" value="100" min="1" max="10000"></div><div class="form-group"><label class="form-label">Duration (seconds)</label><input type="number" id="duration" class="form-input" value="60" min="1" max="3600"></div><div class="form-group"><label class="form-label">Ramp-up (seconds)</label><input type="number" id="ramp-up" class="form-input" value="10" min="0" max="300"></div></div><button type="submit" class="btn btn-primary btn-lg">🚀 Start Load Test</button></form></div></div>"#, if !target_options.is_empty() { format!(r#"<p class="text-secondary mt-1">Or select from saved targets:<select id="saved-targets" class="form-select mt-1" onchange="document.getElementById('target-url').value = this.value"><option value="">-- Select saved target --</option>{}</select></p>"#, target_options) } else { String::new() })
+        format!(
+            r#"<div class="card"><div class="card-header"><h2 class="card-title">Configure Load Test</h2></div><div class="card-body"><form id="load-test-form" onsubmit="event.preventDefault(); startLoadTest();"><div class="grid grid-2"><div class="form-group"><label class="form-label">Test Name</label><input type="text" id="test-name" class="form-input" value="My Load Test" required></div><div class="form-group"><label class="form-label">Target Type</label><select id="target-type" class="form-select"><option value="http">HTTP/HTTPS API</option><option value="hls">HLS Manifest</option></select></div></div><div class="form-group"><label class="form-label">Target URL</label><input type="text" id="target-url" class="form-input" placeholder="http://localhost:3000/api/endpoint" required>{}</div><div class="form-group"><label class="form-label">HTTP Method</label><select id="http-method" class="form-select"><option value="GET">GET</option><option value="POST">POST</option><option value="PUT">PUT</option><option value="DELETE">DELETE</option><option value="PATCH">PATCH</option></select></div><div class="form-group"><label class="form-label">Request Body (JSON)</label><textarea id="request-body" class="form-textarea" placeholder='{{"key": "value"}}'></textarea></div><div class="grid grid-4"><div class="form-group"><label class="form-label">Concurrent Users</label><input type="number" id="concurrent-users" class="form-input" value="10" min="1" max="1000"></div><div class="form-group"><label class="form-label">Requests/Second</label><input type="number" id="rps" class="form-input" value="100" min="1" max="10000"></div><div class="form-group"><label class="form-label">Duration (seconds)</label><input type="number" id="duration" class="form-input" value="60" min="1" max="3600"></div><div class="form-group"><label class="form-label">Ramp-up (seconds)</label><input type="number" id="ramp-up" class="form-input" value="10" min="0" max="300"></div></div><button type="submit" class="btn btn-primary btn-lg">🚀 Start Load Test</button></form></div></div>"#,
+            if !target_options.is_empty() {
+                format!(
+                    r#"<p class="text-secondary mt-1">Or select from saved targets:<select id="saved-targets" class="form-select mt-1" onchange="document.getElementById('target-url').value = this.value"><option value="">-- Select saved target --</option>{}</select></p>"#,
+                    target_options
+                )
+            } else {
+                String::new()
+            }
+        )
     };
 
-    let content = format!(r#"<div class="page-header"><div><div class="hero-kicker">Load testing</div><h1 class="page-title">Load Testing</h1><p class="page-subtitle">Stress test your APIs, services, and video streams.</p></div></div>{status_section}<div class="card mt-4"><div class="card-header"><h2 class="card-title">Supported Target Types</h2></div><div class="card-body"><div class="grid grid-3"><div class="flex gap-2 items-center"><span class="badge badge-info">HTTP/HTTPS</span><span class="text-secondary">REST APIs, Web Services</span></div><div class="flex gap-2 items-center"><span class="badge badge-info">WebSocket</span><span class="text-secondary">Real-time connections</span></div><div class="flex gap-2 items-center"><span class="badge badge-info">TCP</span><span class="text-secondary">Raw socket connections</span></div><div class="flex gap-2 items-center"><span class="badge badge-info">gRPC</span><span class="text-secondary">Protocol buffer services</span></div><div class="flex gap-2 items-center"><span class="badge badge-success">HLS</span><span class="text-secondary">Video streaming (HTTP Live)</span></div><div class="flex gap-2 items-center"><span class="badge badge-success">RTMP</span><span class="text-secondary">Live video streams</span></div></div></div></div>"#, status_section = status_section);
+    let content = format!(
+        r#"<div class="page-header"><div><div class="hero-kicker">Load testing</div><h1 class="page-title">Load Testing</h1><p class="page-subtitle">Generate controlled traffic against HTTP services and HLS manifests.</p></div></div>{status_section}<div class="card mt-4"><div class="card-header"><h2 class="card-title">Supported Target Types</h2></div><div class="card-body"><div class="grid grid-2"><div class="flex gap-2 items-center"><span class="badge badge-info">HTTP/HTTPS</span><span class="text-secondary">REST APIs and web services</span></div><div class="flex gap-2 items-center"><span class="badge badge-success">HLS</span><span class="text-secondary">HTTP Live Streaming manifests</span></div></div></div></div>"#,
+        status_section = status_section
+    );
     base_layout("Load Testing", &content)
 }
 
@@ -645,9 +754,15 @@ pub fn targets_page(targets: &[crate::state::CustomTarget]) -> String {
         let rows: String = targets.iter().map(|t| {
             format!(r#"<tr><td><strong>{}</strong></td><td><span class="badge badge-info">{}</span></td><td><code>{}</code></td><td>{}</td><td><button class="btn btn-danger btn-sm" onclick="deleteTarget('{}')">Delete</button></td></tr>"#, escape_html(&t.name), escape_html(&t.target_type), escape_html(&t.url), escape_html(t.description.as_deref().unwrap_or("-")), t.id)
         }).collect();
-        format!(r#"<div class="table-container"><table><thead><tr><th>Name</th><th>Type</th><th>URL</th><th>Description</th><th>Actions</th></tr></thead><tbody>{}</tbody></table></div>"#, rows)
+        format!(
+            r#"<div class="table-container"><table><thead><tr><th>Name</th><th>Type</th><th>URL</th><th>Description</th><th>Actions</th></tr></thead><tbody>{}</tbody></table></div>"#,
+            rows
+        )
     };
 
-    let content = format!(r#"<div class="page-header"><div><div class="hero-kicker">Targets</div><h1 class="page-title">Targets</h1><p class="page-subtitle">Manage your stress testing targets.</p></div></div><div class="card mb-4"><div class="card-header"><h2 class="card-title">Add New Target</h2></div><div class="card-body"><form id="add-target-form" onsubmit="event.preventDefault(); addTarget();"><div class="grid grid-2"><div class="form-group"><label class="form-label">Target Name</label><input type="text" id="target-name" class="form-input" placeholder="My API Server" required></div><div class="form-group"><label class="form-label">Target Type</label><select id="new-target-type" class="form-select"><option value="http">HTTP/HTTPS API</option><option value="websocket">WebSocket</option><option value="tcp">TCP Socket</option><option value="grpc">gRPC Service</option><option value="hls">HLS Video Stream</option><option value="rtmp">RTMP Stream</option><option value="pipeline">Data Pipeline</option></select></div></div><div class="form-group"><label class="form-label">URL/Endpoint</label><input type="text" id="new-target-url" class="form-input" placeholder="http://localhost:3000" required></div><div class="form-group"><label class="form-label">Description (optional)</label><input type="text" id="new-target-desc" class="form-input" placeholder="Production API endpoint"></div><button type="submit" class="btn btn-primary">➕ Add Target</button></form></div></div><div class="card"><div class="card-header"><h2 class="card-title">Saved Targets</h2></div><div class="card-body">{targets_html}</div></div>"#, targets_html = targets_html);
+    let content = format!(
+        r#"<div class="page-header"><div><div class="hero-kicker">Targets</div><h1 class="page-title">Targets</h1><p class="page-subtitle">Manage your stress testing targets.</p></div></div><div class="card mb-4"><div class="card-header"><h2 class="card-title">Add New Target</h2></div><div class="card-body"><form id="add-target-form" onsubmit="event.preventDefault(); addTarget();"><div class="grid grid-2"><div class="form-group"><label class="form-label">Target Name</label><input type="text" id="target-name" class="form-input" placeholder="My API Server" required></div><div class="form-group"><label class="form-label">Target Type</label><select id="new-target-type" class="form-select"><option value="http">HTTP/HTTPS API</option><option value="hls">HLS Manifest</option></select></div></div><div class="form-group"><label class="form-label">URL/Endpoint</label><input type="text" id="new-target-url" class="form-input" placeholder="http://localhost:3000" required></div><div class="form-group"><label class="form-label">Description (optional)</label><input type="text" id="new-target-desc" class="form-input" placeholder="Production API endpoint"></div><button type="submit" class="btn btn-primary">➕ Add Target</button></form></div></div><div class="card"><div class="card-header"><h2 class="card-title">Saved Targets</h2></div><div class="card-body">{targets_html}</div></div>"#,
+        targets_html = targets_html
+    );
     base_layout("Targets", &content)
 }

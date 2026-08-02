@@ -247,10 +247,9 @@ mod humantime_serde {
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_scenario_runner_creation() {
+    #[test]
+    fn test_scenario_runner_creation() {
         let _runner = ScenarioRunner::with_defaults();
-        assert!(true); // Runner created successfully
     }
 
     #[test]

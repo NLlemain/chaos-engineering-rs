@@ -72,7 +72,10 @@ impl Injector for DnsFaultInjector {
     }
 
     async fn remove(&self, _handle: InjectionHandle) -> Result<()> {
-        info!("Removing DNS fault injection for pattern '{}'", self.config.domain_pattern);
+        info!(
+            "Removing DNS fault injection for pattern '{}'",
+            self.config.domain_pattern
+        );
         Ok(())
     }
 
