@@ -204,8 +204,8 @@ impl DiskSpaceInjector {
                 ChaosError::SystemError(format!("Failed to stat filesystem: {}", e))
             })?;
 
-            let total_space = u64::from(stats.blocks()) * stats.block_size();
-            let free_space = u64::from(stats.blocks_free()) * stats.block_size();
+            let total_space = u128::from(stats.blocks()) * u128::from(stats.block_size());
+            let free_space = u128::from(stats.blocks_free()) * u128::from(stats.block_size());
             let target_free = total_space as f64 * (1.0 - self.target_usage);
             let bytes_to_fill = (free_space as f64 - target_free).max(0.0) as u64;
 
