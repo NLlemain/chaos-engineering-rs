@@ -517,7 +517,8 @@ mod tests {
         let handle = injector.inject(&Target::file(&database)).await.unwrap();
 
         assert!(database.is_dir());
-        assert!(OpenOptions::new().read(true).open(&database).is_err());
+        assert!(!database.is_file());
+        assert!(std::fs::read(&database).is_err());
         injector.remove(handle).await.unwrap();
         assert_eq!(std::fs::read(&database).unwrap(), b"real database bytes");
         std::fs::remove_dir_all(directory).unwrap();

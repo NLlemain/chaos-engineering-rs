@@ -103,19 +103,16 @@ impl Target {
     pub async fn exists(&self) -> bool {
         match self {
             Target::Process { pid } => {
-                #[cfg(unix)]
-                {
-                    use nix::sys::signal;
-                    use nix::unistd::Pid;
-                    signal::kill(Pid::from_raw(*pid as i32), None).is_ok()
-                }
-                #[cfg(not(unix))]
-                {
-                    use sysinfo::System;
-                    let mut sys = System::new_all();
-                    sys.refresh_processes();
-                    sys.process(sysinfo::Pid::from(*pid as usize)).is_some()
-                }
+                use sysinfo::{ProcessStatus, System};
+                let mut sys = System::new_all();
+                sys.refresh_processes();
+                sys.process(sysinfo::Pid::from(*pid as usize))
+                    .is_some_and(|process| {
+                        !matches!(
+                            process.status(),
+                            ProcessStatus::Dead | ProcessStatus::Zombie
+                        )
+                    })
             }
             Target::Network { address } => {
                 // Check if address is reachable
