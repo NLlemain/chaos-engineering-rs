@@ -79,7 +79,7 @@ fn print_cli_report(result: &chaos_scenarios::runner::ScenarioResult) {
     }
 }
 
-fn generate_markdown_report(result: &chaos_scenarios::runner::ScenarioResult) -> String {
+pub(crate) fn generate_markdown_report(result: &chaos_scenarios::runner::ScenarioResult) -> String {
     format!(
         r#"# Chaos Test Report: {}
 
@@ -113,7 +113,7 @@ Test completed successfully.
     )
 }
 
-fn generate_html_report(result: &chaos_scenarios::runner::ScenarioResult) -> String {
+pub(crate) fn generate_html_report(result: &chaos_scenarios::runner::ScenarioResult) -> String {
     let success_rate = result.success_rate() * 100.0;
     let success_class = if success_rate >= 90.0 {
         "success"
@@ -341,4 +341,41 @@ fn generate_html_report(result: &chaos_scenarios::runner::ScenarioResult) -> Str
         phases_html = phases_html,
         timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn scenario_result() -> chaos_scenarios::runner::ScenarioResult {
+        use chaos_scenarios::runner::{PhaseResult, ScenarioResult};
+        ScenarioResult {
+            scenario_name: "report test".to_string(),
+            started_at: chrono::Utc::now(),
+            total_duration: std::time::Duration::from_secs(2),
+            phase_results: vec![PhaseResult {
+                name: "steady state".to_string(),
+                duration: std::time::Duration::from_secs(2),
+                injection_count: 1,
+                attempted_injections: 1,
+                injection_failures: vec![],
+                cleanup_failures: vec![],
+            }],
+            total_injections: 1,
+            attempted_injections: 1,
+            cleanup_failures: 0,
+        }
+    }
+
+    #[test]
+    fn generates_markdown_and_html_reports() {
+        let result = scenario_result();
+        let markdown = generate_markdown_report(&result);
+        let html = generate_html_report(&result);
+
+        assert!(markdown.contains("report test"));
+        assert!(markdown.contains("steady state"));
+        assert!(html.contains("report test"));
+        assert!(html.contains("steady state"));
+    }
 }

@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{bail, Result};
 use chaos_scenarios::{parse_scenario_from_file, ScenarioRunner};
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -13,6 +13,10 @@ pub async fn execute(
     prometheus_port: Option<u16>,
     seed: Option<u64>,
 ) -> Result<()> {
+    if let Some(port) = prometheus_port {
+        bail!("Prometheus export on port {} is not implemented yet; use JSON, Markdown, or HTML output", port);
+    }
+
     println!("{}", "=== Chaos Framework ===".bold().cyan());
     println!("Loading scenario: {}", scenario_file.display());
 
@@ -30,20 +34,20 @@ pub async fn execute(
     if let Some(desc) = &scenario.description {
         println!("  Description: {}", desc);
     }
-    println!("  Duration: {:?}", scenario.duration);
+    let duration = scenario.total_duration() + scenario.ramp_up.unwrap_or_default();
+    println!("  Duration: {:?}", duration);
     println!("  Phases: {}", scenario.phases.len());
     if let Some(seed) = scenario.seed {
         println!("  Seed: {} (reproducible)", seed);
     }
 
     // Create progress bar
-    let pb = ProgressBar::new(scenario.duration.as_secs());
+    let pb = ProgressBar::new(duration.as_secs());
     pb.set_style(
         ProgressStyle::default_bar()
             .template(
                 "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len}s ({msg})",
-            )
-            .unwrap()
+            )?
             .progress_chars("=>-"),
     );
 
@@ -54,8 +58,7 @@ pub async fn execute(
 
     // Spawn progress updater
     let pb_clone = pb.clone();
-    let duration = scenario.duration;
-    tokio::spawn(async move {
+    let progress_task = tokio::spawn(async move {
         let start = tokio::time::Instant::now();
         loop {
             let elapsed = start.elapsed();
@@ -68,7 +71,9 @@ pub async fn execute(
         pb_clone.finish_with_message("Complete");
     });
 
-    let result = runner.run(&scenario).await?;
+    let result = runner.run(&scenario).await;
+    progress_task.abort();
+    let result = result?;
 
     pb.finish_and_clear();
 
@@ -82,10 +87,12 @@ pub async fn execute(
     println!("\n{}", "Phase Results:".bold());
     for phase in &result.phase_results {
         println!(
-            "  {} - Duration: {:?}, Injections: {}",
+            "  {} - Duration: {:?}, Injections: {}/{} ({} failed)",
             phase.name.yellow(),
             phase.duration,
-            phase.injection_count
+            phase.injection_count,
+            phase.attempted_injections,
+            phase.injection_failures.len()
         );
     }
 
@@ -98,16 +105,14 @@ pub async fn execute(
 
     if let Some(html_path) = output_html {
         println!("Generating HTML report to: {}", html_path.display());
-        // HTML generation would be implemented here
+        let html = super::report::generate_html_report(&result);
+        tokio::fs::write(&html_path, html).await?;
     }
 
     if let Some(md_path) = output_markdown {
         println!("Generating Markdown report to: {}", md_path.display());
-        // Markdown generation would be implemented here
-    }
-
-    if let Some(port) = prometheus_port {
-        println!("Prometheus metrics would be available on port: {}", port);
+        let markdown = super::report::generate_markdown_report(&result);
+        tokio::fs::write(&md_path, markdown).await?;
     }
 
     println!(
