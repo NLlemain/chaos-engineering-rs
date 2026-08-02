@@ -17,11 +17,11 @@ name = "chaos"
 path = "src/main.rs"
 
 [dependencies]
-chaos_core = { version = "0.2.0", path = "../chaos_core" }
-chaos_scenarios = { version = "0.2.0", path = "../chaos_scenarios" }
-chaos_metrics = { version = "0.2.0", path = "../chaos_metrics" }
-chaos_web = { version = "0.2.0", path = "../chaos_web" }
-chaos_packs = { version = "0.2.0", path = "../scenario-packs" }
+chaos_core = { version = "0.2.1", path = "../chaos_core" }
+chaos_scenarios = { version = "0.2.1", path = "../chaos_scenarios" }
+chaos_metrics = { version = "0.2.1", path = "../chaos_metrics" }
+chaos_web = { version = "0.2.1", path = "../chaos_web" }
+chaos_packs = { version = "0.2.1", path = "../scenario-packs" }
 tokio = { workspace = true }
 clap = { workspace = true }
 colored = { workspace = true }

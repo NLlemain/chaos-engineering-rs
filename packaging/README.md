@@ -1,6 +1,6 @@
 # Package Manager Publishing
 
-The release workflow renders the Homebrew formula and WinGet manifest templates with the SHA-256 values of the attested `v0.2.0` binaries. Rendered files are attached to the GitHub release.
+The release workflow renders the Homebrew formula and WinGet manifest templates with the SHA-256 values of the attested `v0.2.1` binaries. Rendered files are attached to the GitHub release.
 
 - Homebrew: `chaos-engineering-rs.rb` is published in the [`Ninian-Lemain/homebrew-chaos-engineering`](https://github.com/Ninian-Lemain/homebrew-chaos-engineering) tap.
 - WinGet: `NinianLemain.ChaosEngineeringRs.yaml` passed `winget validate` and is submitted in [microsoft/winget-pkgs#411247](https://github.com/microsoft/winget-pkgs/pull/411247).

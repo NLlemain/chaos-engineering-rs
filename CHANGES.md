@@ -2,6 +2,13 @@
 
 All notable changes are documented here. This project follows semantic versioning.
 
+## 0.2.1 - 2026-08-02
+
+### Fixed
+
+- Database I/O pressure now uses a bounded rolling write set and responds promptly to cancellation, preventing recovery from hanging behind long cycle delays or storage synchronization stalls.
+- Homebrew tap CI now validates installation on both Apple Silicon and Intel runners through the same tap flow users run locally.
+
 ## 0.2.0 - 2026-08-02
 
 ### Added

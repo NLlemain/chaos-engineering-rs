@@ -106,7 +106,7 @@ chaos report chaos.json --compare baseline.json --format markdown --output compa
 Use the repository action from another workflow:
 
 ```yaml
-- uses: Ninian-Lemain/chaos-engineering-rs@v0.2.0
+- uses: Ninian-Lemain/chaos-engineering-rs@v0.2.1
   with:
     scenario: scenarios/api-slo.yaml
     output: chaos-result.json
@@ -172,7 +172,7 @@ Integration tests verify that stable effects disrupt their target and restore re
 Verify a downloaded release artifact with GitHub CLI:
 
 ```bash
-gh attestation verify chaos-v0.2.0-x86_64-unknown-linux-gnu.tar.gz \
+gh attestation verify chaos-v0.2.1-x86_64-unknown-linux-gnu.tar.gz \
   --repo Ninian-Lemain/chaos-engineering-rs
 ```
 
