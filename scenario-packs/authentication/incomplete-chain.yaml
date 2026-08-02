@@ -1,0 +1,16 @@
+name: incomplete_tls_chain
+description: Serve a leaf signed by an intermediate that is deliberately omitted.
+duration: 2m
+labels:
+  pack: authentication
+  fault: incomplete-chain
+phases:
+  - name: missing_intermediate
+    duration: 2m
+    injections:
+      - type: crypto_fault
+        target:
+          system: true
+        listen: 127.0.0.1:18444
+        domain: localhost
+        mode: incomplete_chain

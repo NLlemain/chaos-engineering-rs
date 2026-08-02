@@ -1,9 +1,10 @@
 use crate::config::InjectionConfig;
 use anyhow::{anyhow, bail, Context, Result};
 use chaos_core::{
-    AiProvider, CpuStarvationConfig, CpuStarvationInjector, DependencyProxyConfig,
-    DependencyProxyInjector, DirectedToxic, DiskOperation, DiskSlowConfig, DiskSlowInjector,
-    DynInjector, HttpFaultConfig, HttpFaultInjector, HttpFaultType, MemoryPressureConfig,
+    AiProvider, CpuStarvationConfig, CpuStarvationInjector, CryptoFaultConfig, CryptoFaultInjector,
+    CryptoFaultType, DependencyProxyConfig, DependencyProxyInjector, DirectedToxic, DiskOperation,
+    DiskSlowConfig, DiskSlowInjector, DnsFaultConfig, DnsFaultInjector, DnsFaultMode, DynInjector,
+    HttpFaultConfig, HttpFaultInjector, HttpFaultType, MemoryPressureConfig,
     MemoryPressureInjector, NetworkLatencyInjector, PacketLossConfig, PacketLossInjector,
     ProxyDirection, ProxyToxic, Target,
 };
@@ -88,6 +89,12 @@ pub fn build_injector(config: &InjectionConfig) -> Result<Option<DynInjector>> {
         "http_fault" => {
             build_http_fault(config).map(|injector| Some(Arc::new(injector) as DynInjector))
         }
+        "dns_fault" => {
+            build_dns_fault(config).map(|injector| Some(Arc::new(injector) as DynInjector))
+        }
+        "crypto_fault" => {
+            build_crypto_fault(config).map(|injector| Some(Arc::new(injector) as DynInjector))
+        }
         _ if parameters.is_empty() => Ok(None),
         _ => {
             let mut keys: Vec<_> = parameters.keys().cloned().collect();
@@ -101,6 +108,105 @@ pub fn build_injector(config: &InjectionConfig) -> Result<Option<DynInjector>> {
     }
 }
 
+fn build_dns_fault(config: &InjectionConfig) -> Result<DnsFaultInjector> {
+    let parameters = &config.parameters;
+    ensure_allowed(
+        parameters,
+        &[
+            "listen",
+            "domain_pattern",
+            "mode",
+            "delay",
+            "fake_ip",
+            "failure_rate",
+            "upstream_timeout",
+        ],
+    )?;
+    let Target::Network { address: upstream } =
+        config.target.to_target().map_err(anyhow::Error::msg)?
+    else {
+        bail!("dns_fault requires target.address for its upstream resolver");
+    };
+    let listen = required_string(parameters, "listen")?
+        .parse()
+        .context("Parameter 'listen' must be a socket address")?;
+    let mode = match required_string(parameters, "mode")?
+        .to_ascii_lowercase()
+        .replace('-', "_")
+        .as_str()
+    {
+        "latency" => DnsFaultMode::Latency {
+            delay: duration(parameters, "delay")?
+                .context("DNS latency mode requires parameter 'delay'")?,
+        },
+        "nxdomain" | "nx_domain" => DnsFaultMode::NxDomain,
+        "spoof" => DnsFaultMode::Spoof {
+            fake_ip: required_string(parameters, "fake_ip")?.to_string(),
+        },
+        "blackhole" => DnsFaultMode::Blackhole,
+        value => bail!(
+            "Parameter 'mode' must be latency, nxdomain, spoof, or blackhole; got '{}'",
+            value
+        ),
+    };
+    let dns_config = DnsFaultConfig {
+        listen,
+        upstream,
+        domain_pattern: string(parameters, "domain_pattern")?
+            .unwrap_or("*")
+            .to_string(),
+        fault_mode: mode,
+        failure_rate: number(parameters, "failure_rate")?
+            .map(|value| probability("failure_rate", value))
+            .transpose()?
+            .unwrap_or(1.0),
+        upstream_timeout: duration(parameters, "upstream_timeout")?
+            .unwrap_or(Duration::from_secs(2)),
+    };
+    dns_config.validate()?;
+    Ok(DnsFaultInjector::new(dns_config))
+}
+
+fn build_crypto_fault(config: &InjectionConfig) -> Result<CryptoFaultInjector> {
+    let parameters = &config.parameters;
+    ensure_allowed(parameters, &["listen", "domain", "mode", "delay"])?;
+    if !matches!(
+        config.target.to_target().map_err(anyhow::Error::msg)?,
+        Target::System
+    ) {
+        bail!("crypto_fault requires target.system");
+    }
+    let fault_type = match required_string(parameters, "mode")?
+        .to_ascii_lowercase()
+        .replace('-', "_")
+        .as_str()
+    {
+        "cert_expired" | "expired" => CryptoFaultType::CertExpired,
+        "untrusted_ca" | "untrusted" => CryptoFaultType::UntrustedCa,
+        "incomplete_chain" => CryptoFaultType::IncompleteChain,
+        "handshake_abort" | "abort" => CryptoFaultType::HandshakeAbort,
+        "handshake_delay" | "delay" => CryptoFaultType::HandshakeDelay {
+            delay: duration(parameters, "delay")?
+                .context("TLS handshake delay mode requires parameter 'delay'")?,
+        },
+        value => bail!(
+            "Parameter 'mode' must be cert_expired, untrusted_ca, incomplete_chain, handshake_abort, or handshake_delay; got '{}'",
+            value
+        ),
+    };
+    let crypto_config = CryptoFaultConfig {
+        listen: required_string(parameters, "listen")?
+            .parse()
+            .context("Parameter 'listen' must be a socket address")?,
+        fault_type,
+        target_cert_domain: string(parameters, "domain")?
+            .unwrap_or("localhost")
+            .to_string(),
+    };
+    crypto_config.validate()?;
+    Ok(CryptoFaultInjector::new(crypto_config))
+}
+
 fn build_http_fault(config: &InjectionConfig) -> Result<HttpFaultInjector> {
     let parameters = &config.parameters;
     ensure_allowed(
@@ -112,6 +218,7 @@ fn build_http_fault(config: &InjectionConfig) -> Result<HttpFaultInjector> {
             "path_pattern",
             "rate",
             "status",
+            "status_body",
             "latency",
             "stream_delay",
             "stream_abort",
@@ -137,8 +244,12 @@ fn build_http_fault(config: &InjectionConfig) -> Result<HttpFaultInjector> {
     if let Some(status) = u64_value(parameters, "status")? {
         faults.push(HttpFaultType::Status {
             code: u16::try_from(status).context("Parameter 'status' must fit in u16")?,
-            body: String::new(),
+            body: string(parameters, "status_body")?
+                .unwrap_or_default()
+                .to_string(),
         });
+    } else if parameters.contains_key("status_body") {
+        bail!("Parameter 'status_body' requires 'status'");
     }
     if let Some(delay) = duration(parameters, "latency")? {
         faults.push(HttpFaultType::Latency { delay });
@@ -544,6 +655,22 @@ mod tests {
             include_str!("../../scenario-packs/ai/gemini.yaml"),
             include_str!("../../scenario-packs/ai/openrouter.yaml"),
             include_str!("../../scenario-packs/ai/ollama.yaml"),
+        ] {
+            let scenario = crate::parse_scenario_from_str(yaml, "yaml").unwrap();
+            for injection in scenario.phases.iter().flat_map(|phase| &phase.injections) {
+                assert!(build_injector(injection).unwrap().is_some());
+            }
+        }
+    }
+
+    #[test]
+    fn bundled_dns_and_authentication_packs_parse_and_build() {
+        for yaml in [
+            include_str!("../../scenario-packs/network/dns-spoof.yaml"),
+            include_str!("../../scenario-packs/authentication/expired-certificate.yaml"),
+            include_str!("../../scenario-packs/authentication/incomplete-chain.yaml"),
+            include_str!("../../scenario-packs/authentication/jwks-outage.yaml"),
+            include_str!("../../scenario-packs/authentication/oauth-refresh-failure.yaml"),
         ] {
             let scenario = crate::parse_scenario_from_str(yaml, "yaml").unwrap();
             for injection in scenario.phases.iter().flat_map(|phase| &phase.injections) {

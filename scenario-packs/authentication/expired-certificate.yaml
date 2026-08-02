@@ -1,0 +1,16 @@
+name: expired_tls_certificate
+description: Expose an endpoint whose leaf certificate expired in 2020.
+duration: 2m
+labels:
+  pack: authentication
+  fault: expired-certificate
+phases:
+  - name: expired_certificate
+    duration: 2m
+    injections:
+      - type: crypto_fault
+        target:
+          system: true
+        listen: 127.0.0.1:18443
+        domain: localhost
+        mode: cert_expired

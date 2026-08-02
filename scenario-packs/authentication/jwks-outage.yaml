@@ -1,0 +1,19 @@
+name: unavailable_jwks
+description: Replace JWKS responses with a measurable 503 outage.
+duration: 2m
+labels:
+  pack: authentication
+  fault: jwks-unavailable
+phases:
+  - name: jwks_outage
+    duration: 2m
+    injections:
+      - type: http_fault
+        target:
+          system: true
+        listen: 127.0.0.1:18090
+        upstream: https://login.example.com
+        provider: generic
+        path_pattern: /.well-known/jwks.json
+        status: 503
+        status_body: '{"error":"jwks_temporarily_unavailable"}'

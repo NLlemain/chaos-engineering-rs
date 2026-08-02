@@ -68,6 +68,10 @@ pub struct AiProxyArgs {
     #[arg(long)]
     status: Option<u16>,
 
+    /// Custom response body used with --status
+    #[arg(long, requires = "status")]
+    status_body: Option<String>,
+
     /// Delay the request before contacting the provider
     #[arg(long)]
     latency: Option<String>,
@@ -122,7 +126,7 @@ pub async fn execute(args: AiProxyArgs) -> Result<()> {
     if let Some(code) = args.status {
         faults.push(HttpFaultType::Status {
             code,
-            body: String::new(),
+            body: args.status_body.unwrap_or_default(),
         });
     }
     if let Some(value) = &args.latency {

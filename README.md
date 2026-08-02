@@ -2,8 +2,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE-MIT)
 [![Rust](https://img.shields.io/badge/rust-stable-orange.svg)](https://www.rust-lang.org)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/NLlemain/chaos-engineering-rs)
-[![CI](https://github.com/NLlemain/chaos-engineering-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/NLlemain/chaos-engineering-rs/actions/workflows/ci.yml)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/Ninian-Lemain/chaos-engineering-rs)
+[![CI](https://github.com/Ninian-Lemain/chaos-engineering-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/Ninian-Lemain/chaos-engineering-rs/actions/workflows/ci.yml)
 
 **A lightweight, cross-platform chaos engineering framework for testing service resilience through controlled failure injection.**
 
@@ -86,6 +86,15 @@ chaos ai-proxy \
 
 Point the SDK base URL at the printed local address. The proxy forwards existing authentication headers while injecting provider-shaped 429/5xx errors, delayed SSE or NDJSON events, broken streams, context truncation, malformed tool calls, invalid JSON, empty responses, truncated bodies, and semantic header corruption. Ready-to-edit profiles live in `scenario-packs/ai/`.
 
+### Test DNS and TLS Without Administrator Rights
+
+```bash
+chaos dns-proxy --mode spoof --domain "*.internal" --fake-ip 127.0.0.42
+chaos tls-endpoint --mode incomplete-chain --domain localhost
+```
+
+Point the resolver or TLS client at the printed local endpoint. DNS supports forwarding, selective delay, NXDOMAIN, spoofed IPv4/IPv6 answers, and blackholes. TLS supports expired and untrusted certificates, missing intermediates, delayed handshakes, and abrupt handshake closure. The endpoints are journaled and removed by `recover` or `stop-all` after interrupted runs.
+
 ## 📦 Chaos Injectors (21 Total)
 
 | Injector | Category | Description | Status |
@@ -101,7 +110,7 @@ Point the SDK base URL at the printed local address. The proxy forwards existing
 | `fd_exhaustion` | System | File descriptor leak simulation (`EMFILE`/`ENFILE`) | Operational |
 | `process_freeze` | Process | Execution pause or OS suspend | Operational |
 | `disk_fill` | Storage | Ballast file allocation to trigger `ENOSPC` | Operational |
-| `dns_fault` | Network | DNS delays, NXDOMAIN spoofing, blackholing | Planned |
+| `dns_fault` | Network | Rootless forwarding, delay, NXDOMAIN, spoofing, and blackholes | Stable |
 | `clock_skew` | System | Time drift injection for TLS, JWT, and consensus | Planned |
 | `socket_corrupt` | Network | Bit-flipping and payload corruption in flight | Planned |
 | `http_fault` | L7 Web/AI | Provider errors, delayed or broken streams, body/header/context faults | Stable |
@@ -110,7 +119,9 @@ Point the SDK base URL at the printed local address. The proxy forwards existing
 | `azure_fault` | Cloud | ARM 429 throttling, CosmosDB RU exhaustion, Key Vault 403 | Planned |
 | `cloudflare_fault` | Edge CDN | Cloudflare 520, 522/524 timeouts, Worker CPU, WAF 403 | Planned |
 | `media_streaming_fault` | Media | HLS, DASH, RTSP, and WebRTC disruptions | Planned |
-| `crypto_fault` | Security | TLS certificate, OCSP, signature, and entropy faults | Planned |
+| `crypto_fault` | Security | Expired/untrusted certs, missing chains, handshake delay/abort | Stable* |
+
+`crypto_fault` keeps OCSP, signature corruption, and entropy starvation marked as planned and rejects those modes during validation.
 
 ## 🖥️ Web Dashboard
 

@@ -1,0 +1,19 @@
+name: oauth_refresh_failure
+description: Reject OAuth token refresh requests with invalid_grant.
+duration: 2m
+labels:
+  pack: authentication
+  fault: oauth-refresh
+phases:
+  - name: refresh_rejected
+    duration: 2m
+    injections:
+      - type: http_fault
+        target:
+          system: true
+        listen: 127.0.0.1:18091
+        upstream: https://login.example.com
+        provider: generic
+        path_pattern: /oauth/token
+        status: 400
+        status_body: '{"error":"invalid_grant","error_description":"refresh token expired"}'

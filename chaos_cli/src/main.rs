@@ -148,6 +148,12 @@ enum Commands {
     /// Start a provider-aware AI and HTTP fault proxy
     #[command(alias = "http-proxy")]
     AiProxy(commands::ai_proxy::AiProxyArgs),
+
+    /// Start a rootless DNS fault resolver
+    DnsProxy(commands::dns_proxy::DnsProxyArgs),
+
+    /// Start an endpoint with deterministic TLS failures
+    TlsEndpoint(commands::tls_endpoint::TlsEndpointArgs),
 }
 
 #[tokio::main]
@@ -240,6 +246,12 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::AiProxy(args) => {
             commands::ai_proxy::execute(args).await?;
+        }
+        Commands::DnsProxy(args) => {
+            commands::dns_proxy::execute(args).await?;
+        }
+        Commands::TlsEndpoint(args) => {
+            commands::tls_endpoint::execute(args).await?;
         }
     }
 

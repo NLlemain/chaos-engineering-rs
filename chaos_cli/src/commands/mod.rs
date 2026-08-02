@@ -1,5 +1,6 @@
 pub mod ai_proxy;
 pub mod attach;
+pub mod dns_proxy;
 pub mod doctor;
 pub mod dry_run;
 pub mod list;
@@ -8,4 +9,5 @@ pub mod recover;
 pub mod report;
 pub mod run;
 pub mod serve;
+pub mod tls_endpoint;
 pub mod validate;

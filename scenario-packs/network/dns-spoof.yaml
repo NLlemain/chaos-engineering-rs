@@ -1,0 +1,19 @@
+name: dns_spoof_and_latency
+description: Return a controlled address for matching names while forwarding every other query.
+duration: 2m
+labels:
+  pack: network
+  protocol: dns
+phases:
+  - name: internal_dns_fault
+    duration: 2m
+    injections:
+      - type: dns_fault
+        target:
+          address: 1.1.1.1:53
+        listen: 127.0.0.1:15353
+        domain_pattern: "*.internal.example"
+        mode: spoof
+        fake_ip: 127.0.0.42
+        failure_rate: 1.0
+        upstream_timeout: 2s
