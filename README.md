@@ -13,7 +13,7 @@ Built in Rust for performance and safety. Test how your services handle real-wor
 
 - **🌐 Cross-Platform**: Windows, macOS, Linux with platform-native chaos injection and graceful cross-platform fallback
 - **⚡ High Performance**: Async Rust, ~15MB memory, <1% CPU overhead
-- **🎯 Honest Capability Registry**: 22 discoverable chaos types with stable, experimental, and planned status shown directly by `chaos list`
+- **🎯 Honest Capability Registry**: 23 discoverable chaos types with stable, experimental, and planned status shown directly by `chaos list`
 - **📋 YAML Configuration**: Declarative test scenarios with multi-phase support
 - **🖥️ Web Dashboard**: Dark-themed UI for test management and monitoring
 - **🔥 Load Testing**: Rate-limited concurrent load tests for HTTP/HTTPS APIs and HLS manifests
@@ -104,12 +104,22 @@ chaos container --compose-service api --compose-file compose.yaml --action kill 
 
 Container IDs are resolved with Docker itself; Compose services resolve every current replica. Pause, stop, and kill operations record prior state in the recovery journal and restore it on cleanup. `restart` performs an immediate observable restart and does not invent a persistent fault.
 
-## 📦 Chaos Injectors (22 Total)
+### Test DuckDB, SQLite, PostgreSQL, and MySQL
+
+```bash
+chaos database --engine duckdb --file data/app.duckdb --mode unavailable --duration 30s
+chaos proxy --upstream 127.0.0.1:5432 --listen 127.0.0.1:15432 --max-connections 2
+```
+
+File-backed DuckDB and SQLite faults include byte-preserving unavailability, read-only permissions, advisory locks, real neighboring I/O pressure, and controlled inode pressure. PostgreSQL and MySQL use the protocol-agnostic proxy for disconnects, delayed responses, and connection-pool exhaustion. Ready-to-edit profiles live in `scenario-packs/databases/`.
+
+## 📦 Chaos Injectors (23 Total)
 
 | Injector | Category | Description | Status |
 |----------|----------|-------------|--------|
 | `dependency_proxy` | Network | Rootless directional TCP faults for any dependency | Stable |
 | `container_fault` | Container | Docker/Compose pause, stop, kill, restart, and restoration | Stable |
+| `database_fault` | Storage | DuckDB/SQLite outage, read-only, lock, I/O and inode pressure | Stable/Experimental |
 | `network_latency` | Network | Native delay on Linux and Windows | Experimental |
 | `packet_loss` | Network | Native Linux packet loss | Experimental (Linux) |
 | `tcp_reset` | Network | Native Linux TCP termination | Experimental (Linux) |

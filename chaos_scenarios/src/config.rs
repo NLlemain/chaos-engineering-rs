@@ -55,6 +55,8 @@ pub struct TargetConfig {
     #[serde(default)]
     pub compose_project: Option<String>,
     #[serde(default)]
+    pub file: Option<std::path::PathBuf>,
+    #[serde(default)]
     pub pattern: Option<String>,
     #[serde(default)]
     pub process_name: Option<String>,
@@ -69,6 +71,7 @@ impl TargetConfig {
             self.address.is_some(),
             self.container_id.is_some(),
             self.compose_service.is_some(),
+            self.file.is_some(),
             self.pattern.is_some(),
             self.process_name.is_some(),
             self.system,
@@ -104,6 +107,8 @@ impl TargetConfig {
                     .unwrap_or_else(|| "compose.yaml".into()),
                 self.compose_project.clone(),
             ))
+        } else if let Some(path) = &self.file {
+            Ok(chaos_core::Target::file(path))
         } else if let Some(pattern) = &self.pattern {
             Ok(chaos_core::Target::process_pattern(pattern.clone()))
         } else if let Some(process_name) = &self.process_name {

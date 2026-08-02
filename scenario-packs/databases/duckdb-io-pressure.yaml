@@ -1,0 +1,17 @@
+name: duckdb_io_pressure
+description: Write and sync a neighboring pressure file without modifying the database.
+duration: 1m
+labels:
+  pack: databases
+  engine: duckdb
+phases:
+  - name: storage_contention
+    duration: 1m
+    injections:
+      - type: database_fault
+        target:
+          file: data/app.duckdb
+        engine: duckdb
+        mode: io_pressure
+        bytes_per_cycle: 4194304
+        cycle_delay: 10ms

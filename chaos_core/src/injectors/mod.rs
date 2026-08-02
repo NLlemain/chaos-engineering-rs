@@ -5,6 +5,7 @@ pub mod cloudflare_fault;
 pub mod container_fault;
 pub mod cpu;
 pub mod crypto_fault;
+pub mod database_fault;
 pub mod disk;
 pub mod disk_fill;
 pub mod dns;
@@ -56,6 +57,7 @@ pub use cloudflare_fault::*;
 pub use container_fault::*;
 pub use cpu::*;
 pub use crypto_fault::*;
+pub use database_fault::*;
 pub use disk::*;
 pub use disk_fill::*;
 pub use dns::*;
@@ -159,6 +161,7 @@ impl InjectorRegistry {
             "container_fault",
             Arc::new(ContainerFaultInjector::default()),
         );
+        registry.register("database_fault", Arc::new(DatabaseFaultInjector::default()));
         registry.register(
             "dependency_proxy",
             Arc::new(DependencyProxyInjector::default()),

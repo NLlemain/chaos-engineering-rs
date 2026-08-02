@@ -1,0 +1,16 @@
+name: database_pool_exhaustion
+description: Allow only two simultaneous dependency connections and reject the rest.
+duration: 1m
+labels:
+  pack: databases
+  fault: exhausted-pool
+phases:
+  - name: connection_capacity
+    duration: 1m
+    injections:
+      - type: dependency_proxy
+        target:
+          address: 127.0.0.1:5432
+        listen: 127.0.0.1:15432
+        direction: both
+        max_connections: 2

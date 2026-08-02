@@ -19,6 +19,9 @@ pub enum Target {
         project: Option<String>,
     },
 
+    /// Target a local file-backed database or storage artifact
+    File { path: PathBuf },
+
     /// Target a specific thread
     Thread { tid: u32 },
 
@@ -54,6 +57,10 @@ impl Target {
         }
     }
 
+    pub fn file(path: impl Into<PathBuf>) -> Self {
+        Self::File { path: path.into() }
+    }
+
     pub fn thread(tid: u32) -> Self {
         Self::Thread { tid }
     }
@@ -86,6 +93,7 @@ impl Target {
                     .map(|name| format!(" (project {})", name))
                     .unwrap_or_default()
             ),
+            Target::File { path } => format!("File {}", path.display()),
             Target::Thread { tid } => format!("Thread TID {}", tid),
             Target::ProcessPattern { pattern } => format!("Process pattern '{}'", pattern),
             Target::System => "System".to_string(),
@@ -139,6 +147,7 @@ impl Target {
                     .await
                     .is_some_and(|output| !output.trim().is_empty())
             }
+            Target::File { path } => path.is_file(),
             Target::Thread { tid: _ } => {
                 #[cfg(unix)]
                 {

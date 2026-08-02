@@ -1,0 +1,16 @@
+name: mysql_slow_responses
+description: Delay downstream MySQL traffic so query responses exceed client budgets.
+duration: 1m
+labels:
+  pack: databases
+  engine: mysql
+phases:
+  - name: delayed_query_responses
+    duration: 1m
+    injections:
+      - type: dependency_proxy
+        target:
+          address: 127.0.0.1:3306
+        listen: 127.0.0.1:13306
+        direction: downstream
+        latency: 2s

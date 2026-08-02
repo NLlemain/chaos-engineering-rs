@@ -3,9 +3,10 @@ use anyhow::{anyhow, bail, Context, Result};
 use chaos_core::{
     AiProvider, ContainerFaultAction, ContainerFaultConfig, ContainerFaultInjector,
     CpuStarvationConfig, CpuStarvationInjector, CryptoFaultConfig, CryptoFaultInjector,
-    CryptoFaultType, DependencyProxyConfig, DependencyProxyInjector, DirectedToxic, DiskOperation,
-    DiskSlowConfig, DiskSlowInjector, DnsFaultConfig, DnsFaultInjector, DnsFaultMode, DynInjector,
-    HttpFaultConfig, HttpFaultInjector, HttpFaultType, MemoryPressureConfig,
+    CryptoFaultType, DatabaseFaultConfig, DatabaseFaultInjector, DatabaseFaultMode,
+    DependencyProxyConfig, DependencyProxyInjector, DirectedToxic, DiskOperation, DiskSlowConfig,
+    DiskSlowInjector, DnsFaultConfig, DnsFaultInjector, DnsFaultMode, DynInjector, HttpFaultConfig,
+    HttpFaultInjector, HttpFaultType, LocalDatabaseEngine, MemoryPressureConfig,
     MemoryPressureInjector, NetworkLatencyInjector, PacketLossConfig, PacketLossInjector,
     ProxyDirection, ProxyToxic, Target,
 };
@@ -99,6 +100,9 @@ pub fn build_injector(config: &InjectionConfig) -> Result<Option<DynInjector>> {
         "container_fault" => {
             build_container_fault(config).map(|injector| Some(Arc::new(injector) as DynInjector))
         }
+        "database_fault" => {
+            build_database_fault(config).map(|injector| Some(Arc::new(injector) as DynInjector))
+        }
         _ if parameters.is_empty() => Ok(None),
         _ => {
             let mut keys: Vec<_> = parameters.keys().cloned().collect();
@@ -110,6 +114,60 @@ pub fn build_injector(config: &InjectionConfig) -> Result<Option<DynInjector>> {
             )
         }
     }
+}
+
+fn build_database_fault(config: &InjectionConfig) -> Result<DatabaseFaultInjector> {
+    let parameters = &config.parameters;
+    ensure_allowed(
+        parameters,
+        &["engine", "mode", "bytes_per_cycle", "cycle_delay", "files"],
+    )?;
+    if !matches!(
+        config.target.to_target().map_err(anyhow::Error::msg)?,
+        Target::File { .. }
+    ) {
+        bail!("database_fault requires target.file");
+    }
+    let engine = match required_string(parameters, "engine")?
+        .to_ascii_lowercase()
+        .replace('-', "_")
+        .as_str()
+    {
+        "duckdb" | "duck_db" => LocalDatabaseEngine::DuckDb,
+        "sqlite" | "sqlite3" => LocalDatabaseEngine::Sqlite,
+        value => bail!(
+            "Parameter 'engine' must be duckdb or sqlite; got '{}'",
+            value
+        ),
+    };
+    let mode = match required_string(parameters, "mode")?
+        .to_ascii_lowercase()
+        .replace('-', "_")
+        .as_str()
+    {
+        "unavailable" => DatabaseFaultMode::Unavailable,
+        "read_only" | "readonly" => DatabaseFaultMode::ReadOnly,
+        "lock" => DatabaseFaultMode::Lock,
+        "io_pressure" => DatabaseFaultMode::IoPressure {
+            bytes_per_cycle: usize::try_from(
+                u64_value(parameters, "bytes_per_cycle")?.unwrap_or(1024 * 1024),
+            )
+            .context("Parameter 'bytes_per_cycle' is too large")?,
+            cycle_delay: duration(parameters, "cycle_delay")?
+                .unwrap_or(Duration::from_millis(10)),
+        },
+        "inode_pressure" => DatabaseFaultMode::InodePressure {
+            files: usize::try_from(u64_value(parameters, "files")?.unwrap_or(1_000))
+                .context("Parameter 'files' is too large")?,
+        },
+        value => bail!(
+            "Parameter 'mode' must be unavailable, read_only, lock, io_pressure, or inode_pressure; got '{}'",
+            value
+        ),
+    };
+    let database_config = DatabaseFaultConfig { engine, mode };
+    database_config.validate()?;
+    Ok(DatabaseFaultInjector::new(database_config))
 }
 
 fn build_container_fault(config: &InjectionConfig) -> Result<ContainerFaultInjector> {
@@ -356,6 +414,7 @@ fn build_dependency_proxy(config: &InjectionConfig) -> Result<DependencyProxyInj
             "timeout",
             "slow_close",
             "limit_bytes",
+            "max_connections",
             "partition",
             "corruption_rate",
             "duplicate_rate",
@@ -417,6 +476,9 @@ fn build_dependency_proxy(config: &InjectionConfig) -> Result<DependencyProxyInj
     }
     if let Some(bytes) = u64_value(parameters, "limit_bytes")? {
         push(ProxyToxic::LimitData { bytes });
+    }
+    if let Some(connections) = u64_value(parameters, "max_connections")? {
+        push(ProxyToxic::ConnectionLimit { connections });
     }
     if boolean(parameters, "partition")?.unwrap_or(false) {
         push(ProxyToxic::Partition);
@@ -720,6 +782,23 @@ mod tests {
         .unwrap();
         for injection in scenario.phases.iter().flat_map(|phase| &phase.injections) {
             assert!(build_injector(injection).unwrap().is_some());
+        }
+    }
+
+    #[test]
+    fn bundled_database_packs_parse_and_build() {
+        for yaml in [
+            include_str!("../../scenario-packs/databases/duckdb-unavailable.yaml"),
+            include_str!("../../scenario-packs/databases/duckdb-io-pressure.yaml"),
+            include_str!("../../scenario-packs/databases/sqlite-read-only.yaml"),
+            include_str!("../../scenario-packs/databases/postgres-disconnect.yaml"),
+            include_str!("../../scenario-packs/databases/mysql-slow-queries.yaml"),
+            include_str!("../../scenario-packs/databases/pool-exhaustion.yaml"),
+        ] {
+            let scenario = crate::parse_scenario_from_str(yaml, "yaml").unwrap();
+            for injection in scenario.phases.iter().flat_map(|phase| &phase.injections) {
+                assert!(build_injector(injection).unwrap().is_some());
+            }
         }
     }
 }

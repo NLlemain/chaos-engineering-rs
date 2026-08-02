@@ -1,0 +1,16 @@
+name: postgres_disconnects
+description: Accept PostgreSQL connections locally and partition their upstream traffic.
+duration: 30s
+labels:
+  pack: databases
+  engine: postgresql
+phases:
+  - name: database_partition
+    duration: 30s
+    injections:
+      - type: dependency_proxy
+        target:
+          address: 127.0.0.1:5432
+        listen: 127.0.0.1:15432
+        direction: both
+        partition: true

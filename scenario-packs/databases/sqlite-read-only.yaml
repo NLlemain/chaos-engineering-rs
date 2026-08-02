@@ -1,0 +1,15 @@
+name: sqlite_read_only
+description: Remove write permission from a SQLite file and restore its exact prior mode.
+duration: 30s
+labels:
+  pack: databases
+  engine: sqlite
+phases:
+  - name: read_only_database
+    duration: 30s
+    injections:
+      - type: database_fault
+        target:
+          file: data/app.sqlite3
+        engine: sqlite
+        mode: read_only

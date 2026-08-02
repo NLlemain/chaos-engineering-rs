@@ -52,6 +52,7 @@ pub enum ProxyToxic {
     Corrupt { probability: f64 },
     Duplicate { probability: f64 },
     Reorder { probability: f64, delay_ms: u64 },
+    ConnectionLimit { connections: u64 },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -147,6 +148,11 @@ impl DependencyProxyConfig {
                         "Data limit must be greater than zero".to_string(),
                     ));
                 }
+                ProxyToxic::ConnectionLimit { connections: 0 } => {
+                    return Err(ChaosError::InvalidConfig(
+                        "Connection limit must be greater than zero".to_string(),
+                    ));
+                }
                 ProxyToxic::Corrupt { probability }
                 | ProxyToxic::Duplicate { probability }
                 | ProxyToxic::Reorder { probability, .. } => {
@@ -173,6 +179,8 @@ fn validate_probability(name: &str, value: f64) -> Result<()> {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProxyMetricsSnapshot {
     pub accepted_connections: u64,
+    pub rejected_connections: u64,
+    pub active_connections: u64,
     pub upstream_bytes: u64,
     pub downstream_bytes: u64,
     pub disruptions: u64,
@@ -181,6 +189,8 @@ pub struct ProxyMetricsSnapshot {
 #[derive(Default)]
 struct ProxyMetrics {
     accepted_connections: AtomicU64,
+    rejected_connections: AtomicU64,
+    active_connections: AtomicU64,
     upstream_bytes: AtomicU64,
     downstream_bytes: AtomicU64,
     disruptions: AtomicU64,
@@ -190,6 +200,8 @@ impl ProxyMetrics {
     fn snapshot(&self) -> ProxyMetricsSnapshot {
         ProxyMetricsSnapshot {
             accepted_connections: self.accepted_connections.load(Ordering::Relaxed),
+            rejected_connections: self.rejected_connections.load(Ordering::Relaxed),
+            active_connections: self.active_connections.load(Ordering::Relaxed),
             upstream_bytes: self.upstream_bytes.load(Ordering::Relaxed),
             downstream_bytes: self.downstream_bytes.load(Ordering::Relaxed),
             disruptions: self.disruptions.load(Ordering::Relaxed),
@@ -269,18 +281,34 @@ async fn run_proxy(
         };
         metrics.accepted_connections.fetch_add(1, Ordering::Relaxed);
 
+        if let Some(limit) = selected_connection_limit(&config.toxics) {
+            let active = metrics.active_connections.fetch_add(1, Ordering::Relaxed) + 1;
+            if active > limit {
+                metrics.active_connections.fetch_sub(1, Ordering::Relaxed);
+                metrics.rejected_connections.fetch_add(1, Ordering::Relaxed);
+                metrics.disruptions.fetch_add(1, Ordering::Relaxed);
+                drop(client);
+                continue;
+            }
+        } else {
+            metrics.active_connections.fetch_add(1, Ordering::Relaxed);
+        }
+
         let connection_config = config.clone();
         let connection_cancellation = cancellation.clone();
         let connection_metrics = metrics.clone();
         tokio::spawn(async move {
-            if let Err(error) = handle_connection(
+            let result = handle_connection(
                 client,
                 connection_config,
                 connection_cancellation,
-                connection_metrics,
+                connection_metrics.clone(),
             )
-            .await
-            {
+            .await;
+            connection_metrics
+                .active_connections
+                .fetch_sub(1, Ordering::Relaxed);
+            if let Err(error) = result {
                 debug!("Proxy connection from {} ended: {}", peer, error);
             }
         });
@@ -379,10 +407,23 @@ impl CopyPlan {
                     probability,
                     delay_ms,
                 } => plan.reorder = Some((probability, Duration::from_millis(delay_ms))),
+                ProxyToxic::ConnectionLimit { .. } => {}
             }
         }
         plan
     }
+}
+
+fn selected_connection_limit(toxics: &[DirectedToxic]) -> Option<u64> {
+    toxics
+        .iter()
+        .filter_map(|directed| match directed.toxic {
+            ProxyToxic::ConnectionLimit { connections } if selected(directed.toxicity) => {
+                Some(connections)
+            }
+            _ => None,
+        })
+        .min()
 }
 
 async fn copy_with_faults<R, W>(
@@ -709,6 +750,34 @@ mod tests {
         client.read_to_end(&mut response).await.unwrap();
         assert_eq!(&response, b"abcd");
 
+        injector.remove(handle).await.unwrap();
+        stop_echo.cancel();
+    }
+
+    #[tokio::test]
+    async fn connection_limit_rejects_excess_clients() {
+        let (upstream, stop_echo) = echo_server().await;
+        let config = DependencyProxyConfig::new("127.0.0.1:0".parse().unwrap(), upstream)
+            .with_toxic(DirectedToxic::new(
+                ProxyDirection::Both,
+                ProxyToxic::ConnectionLimit { connections: 1 },
+            ));
+        let injector = DependencyProxyInjector::new(config);
+        let handle = injector.inject(&Target::network(upstream)).await.unwrap();
+        let listen: SocketAddr = handle.metadata["listen"].as_str().unwrap().parse().unwrap();
+
+        let _first = TcpStream::connect(listen).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(30)).await;
+        let mut second = TcpStream::connect(listen).await.unwrap();
+        let _ = second.write_all(b"rejected").await;
+        let mut byte = [0u8; 1];
+        let received =
+            tokio::time::timeout(Duration::from_millis(200), second.read(&mut byte)).await;
+        assert!(!matches!(received, Ok(Ok(1))));
+
+        let metrics = injector.metrics(&handle.id).await.unwrap();
+        assert_eq!(metrics.rejected_connections, 1);
+        assert_eq!(metrics.disruptions, 1);
         injector.remove(handle).await.unwrap();
         stop_echo.cancel();
     }

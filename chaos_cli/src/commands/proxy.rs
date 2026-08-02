@@ -66,6 +66,10 @@ pub struct ProxyArgs {
     #[arg(long)]
     limit_data: Option<u64>,
 
+    /// Reject connections beyond this concurrent count
+    #[arg(long)]
+    max_connections: Option<u64>,
+
     /// Hold all matching traffic until the injection is removed
     #[arg(long)]
     partition: bool,
@@ -129,6 +133,9 @@ pub async fn execute(args: ProxyArgs) -> Result<()> {
     if let Some(bytes) = args.limit_data {
         push(ProxyToxic::LimitData { bytes });
     }
+    if let Some(connections) = args.max_connections {
+        push(ProxyToxic::ConnectionLimit { connections });
+    }
     if args.partition {
         push(ProxyToxic::Partition);
     }
@@ -171,8 +178,9 @@ pub async fn execute(args: ProxyArgs) -> Result<()> {
     let metrics = injector.metrics(&handle.id).await.unwrap_or_default();
     executor.remove(handle).await?;
     println!(
-        "Stopped: {} connections, {} upstream bytes, {} downstream bytes, {} disruptions",
+        "Stopped: {} accepted, {} rejected, {} upstream bytes, {} downstream bytes, {} disruptions",
         metrics.accepted_connections,
+        metrics.rejected_connections,
         metrics.upstream_bytes,
         metrics.downstream_bytes,
         metrics.disruptions

@@ -1,0 +1,15 @@
+name: duckdb_file_unavailable
+description: Make a DuckDB file impossible to open, then restore the original bytes.
+duration: 30s
+labels:
+  pack: databases
+  engine: duckdb
+phases:
+  - name: local_database_outage
+    duration: 30s
+    injections:
+      - type: database_fault
+        target:
+          file: data/app.duckdb
+        engine: duckdb
+        mode: unavailable

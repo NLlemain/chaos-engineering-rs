@@ -157,6 +157,9 @@ enum Commands {
 
     /// Pause, stop, kill, or restart Docker and Compose targets
     Container(commands::container::ContainerArgs),
+
+    /// Disrupt a local DuckDB or SQLite database file
+    Database(commands::database::DatabaseArgs),
 }
 
 #[tokio::main]
@@ -258,6 +261,9 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::Container(args) => {
             commands::container::execute(args).await?;
+        }
+        Commands::Database(args) => {
+            commands::database::execute(args).await?;
         }
     }
 
