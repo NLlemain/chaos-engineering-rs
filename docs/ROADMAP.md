@@ -22,7 +22,8 @@ The roadmap favors credibility, recovery, and protocol depth over an inflated in
 - [ ] Add packet-level media fixtures for HLS segment loss and WebRTC keyframe-loss validation.
 - [ ] Add OAuth/JWKS fixtures with certificate rotation and controllable clock sources.
 - [ ] Add signed, versioned pack indexes with compatibility constraints.
-- [ ] Add machine-readable `doctor --json` and capability-matrix generation.
+- [x] Add machine-readable `list --json` and `doctor --json` output.
+- [ ] Generate the checked-in capability matrix from the runtime registry during releases.
 
 ## v0.4 - Distributed Experiments
 
