@@ -1,0 +1,17 @@
+name: rabbitmq_ack_loss
+description: Cut the client-to-broker stream after initial traffic so later acknowledgements cannot arrive.
+duration: 90s
+labels:
+  pack: queues
+  protocol: amqp
+phases:
+  - name: acknowledgement_path_cut
+    duration: 90s
+    injections:
+      - type: dependency_proxy
+        target:
+          address: 127.0.0.1:5672
+        listen: 127.0.0.1:15672
+        direction: upstream
+        limit_bytes: 4096
+        slow_close: 1s

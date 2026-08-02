@@ -1,0 +1,20 @@
+name: object_storage_throttling
+description: Return HTTP 429 for selected object-store requests.
+duration: 2m
+labels:
+  pack: object-storage
+  fault: throttling
+phases:
+  - name: throttled_requests
+    duration: 2m
+    injections:
+      - type: http_fault
+        target:
+          system: true
+        listen: 127.0.0.1:18122
+        upstream: http://127.0.0.1:9000
+        provider: generic
+        path_pattern: /test-bucket/*
+        rate: 0.4
+        status: 429
+        status_body: storage request throttled

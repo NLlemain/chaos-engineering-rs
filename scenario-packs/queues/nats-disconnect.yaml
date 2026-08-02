@@ -1,0 +1,17 @@
+name: nats_disconnects
+description: Close selected NATS connections after a short timeout.
+duration: 90s
+labels:
+  pack: queues
+  protocol: nats
+phases:
+  - name: intermittent_disconnects
+    duration: 90s
+    injections:
+      - type: dependency_proxy
+        target:
+          address: 127.0.0.1:4222
+        listen: 127.0.0.1:14222
+        direction: both
+        toxicity: 0.4
+        timeout: 2s

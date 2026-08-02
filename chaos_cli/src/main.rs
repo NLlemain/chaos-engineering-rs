@@ -123,6 +123,9 @@ enum Commands {
     /// List available injectors
     List,
 
+    /// Search and download protocol-specific scenario packs
+    Pack(commands::pack::PackArgs),
+
     /// Validate a scenario and environment without applying faults
     DryRun {
         /// Path to scenario file
@@ -240,6 +243,9 @@ async fn main() -> anyhow::Result<()> {
 
         Commands::List => {
             commands::list::execute().await?;
+        }
+        Commands::Pack(args) => {
+            commands::pack::execute(args).await?;
         }
         Commands::DryRun { scenario_file } => {
             commands::dry_run::execute(scenario_file).await?;

@@ -1,0 +1,18 @@
+name: kafka_rebalance_pressure
+description: Intermittently partition broker connections to trigger client recovery and group rebalances.
+duration: 2m
+labels:
+  pack: queues
+  protocol: kafka
+phases:
+  - name: broker_disconnects
+    duration: 2m
+    injections:
+      - type: dependency_proxy
+        target:
+          address: 127.0.0.1:9092
+        listen: 127.0.0.1:19092
+        direction: both
+        toxicity: 0.35
+        timeout: 1500ms
+        slow_close: 500ms

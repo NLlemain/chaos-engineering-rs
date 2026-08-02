@@ -1,0 +1,16 @@
+name: object_storage_corrupt_download
+description: Corrupt selected bytes traveling from the object store to clients.
+duration: 90s
+labels:
+  pack: object-storage
+  fault: corrupt-download
+phases:
+  - name: corrupt_response_bytes
+    duration: 90s
+    injections:
+      - type: dependency_proxy
+        target:
+          address: 127.0.0.1:9000
+        listen: 127.0.0.1:19000
+        direction: downstream
+        corruption_rate: 0.015

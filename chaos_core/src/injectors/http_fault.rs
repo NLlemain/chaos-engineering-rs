@@ -81,6 +81,7 @@ pub enum HttpFaultType {
     StripHeaders { headers: Vec<String> },
     Slowloris { chunk_delay: Duration },
     TruncateBody { bytes: usize },
+    ReplaceBody { body: String, content_type: String },
     MalformedJson,
     MalformedHeaders,
     EmptyResponse,
@@ -347,6 +348,13 @@ async fn proxy_request(
             match fault {
                 HttpFaultType::TruncateBody { bytes } => {
                     response_body.truncate(*bytes);
+                }
+                HttpFaultType::ReplaceBody { body, content_type } => {
+                    response_body = body.as_bytes().to_vec();
+                    if let Ok(value) = HeaderValue::from_str(content_type) {
+                        headers.insert(header::CONTENT_TYPE, value);
+                    }
+                    headers.remove(header::CONTENT_LENGTH);
                 }
                 HttpFaultType::MalformedJson => response_body = b"{\"chaos\":".to_vec(),
                 HttpFaultType::EmptyResponse => response_body.clear(),
@@ -814,6 +822,35 @@ mod tests {
                 .unwrap()
                 .stream_events_dropped,
             2
+        );
+
+        injector.remove(handle).await.unwrap();
+        stop_upstream.cancel();
+    }
+
+    #[tokio::test]
+    async fn response_body_replacement_is_observable() {
+        let (upstream, stop_upstream) = upstream().await;
+        let injector = HttpFaultInjector::builder()
+            .upstream(upstream)
+            .faults(vec![HttpFaultType::ReplaceBody {
+                body: "#EXTM3U\n#EXT-X-MEDIA-SEQUENCE:7\n".to_string(),
+                content_type: "application/vnd.apple.mpegurl".to_string(),
+            }])
+            .build();
+        let handle = injector.inject(&Target::System).await.unwrap();
+        let listen = handle.metadata["listen"].as_str().unwrap();
+
+        let response = reqwest::get(format!("http://{}/live.m3u8", listen))
+            .await
+            .unwrap();
+        assert_eq!(
+            response.headers()["content-type"],
+            "application/vnd.apple.mpegurl"
+        );
+        assert_eq!(
+            response.text().await.unwrap(),
+            "#EXTM3U\n#EXT-X-MEDIA-SEQUENCE:7\n"
         );
 
         injector.remove(handle).await.unwrap();

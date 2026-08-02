@@ -1,0 +1,17 @@
+name: object_storage_partial_upload
+description: Cut upload streams after 1 MiB reaches the object-store endpoint.
+duration: 90s
+labels:
+  pack: object-storage
+  fault: partial-upload
+phases:
+  - name: truncated_uploads
+    duration: 90s
+    injections:
+      - type: dependency_proxy
+        target:
+          address: 127.0.0.1:9000
+        listen: 127.0.0.1:19000
+        direction: upstream
+        limit_bytes: 1048576
+        slow_close: 500ms

@@ -1,0 +1,15 @@
+name: mqtt_packet_loss
+description: Apply native Linux packet loss while MQTT devices are connected.
+duration: 1m
+labels:
+  pack: iot
+  protocol: mqtt
+phases:
+  - name: lossy_network
+    duration: 1m
+    injections:
+      - type: packet_loss
+        target:
+          system: true
+        loss_rate: 0.1
+        correlation: 0.25

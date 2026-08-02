@@ -1,0 +1,26 @@
+name: hls_stale_manifest
+description: Replace a live HLS playlist with a deterministic stale manifest.
+duration: 2m
+labels:
+  pack: media
+  protocol: hls
+phases:
+  - name: stale_playlist
+    duration: 2m
+    injections:
+      - type: http_fault
+        target:
+          system: true
+        listen: 127.0.0.1:18102
+        upstream: http://127.0.0.1:8080
+        provider: generic
+        path_pattern: /live/index.m3u8
+        replace_content_type: application/vnd.apple.mpegurl
+        replace_body: |
+          #EXTM3U
+          #EXT-X-VERSION:3
+          #EXT-X-MEDIA-SEQUENCE:41
+          #EXTINF:6.0,
+          /segments/41.ts
+          #EXTINF:6.0,
+          /segments/42.ts

@@ -1,0 +1,19 @@
+name: object_storage_stale_read
+description: Replace one object response with deterministic stale content.
+duration: 2m
+labels:
+  pack: object-storage
+  fault: stale-read
+phases:
+  - name: stale_object
+    duration: 2m
+    injections:
+      - type: http_fault
+        target:
+          system: true
+        listen: 127.0.0.1:18121
+        upstream: http://127.0.0.1:9000
+        provider: generic
+        path_pattern: /test-bucket/state.json
+        replace_content_type: application/json
+        replace_body: '{"version":1,"state":"stale"}'

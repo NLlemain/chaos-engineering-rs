@@ -315,6 +315,8 @@ fn build_http_fault(config: &InjectionConfig) -> Result<HttpFaultInjector> {
             "malformed_tool_call",
             "context_keep",
             "truncate_body",
+            "replace_body",
+            "replace_content_type",
             "malformed_json",
             "malformed_headers",
             "empty_response",
@@ -366,6 +368,16 @@ fn build_http_fault(config: &InjectionConfig) -> Result<HttpFaultInjector> {
         faults.push(HttpFaultType::TruncateBody {
             bytes: usize::try_from(bytes).context("Parameter 'truncate_body' is too large")?,
         });
+    }
+    if let Some(body) = string(parameters, "replace_body")? {
+        faults.push(HttpFaultType::ReplaceBody {
+            body: body.to_string(),
+            content_type: string(parameters, "replace_content_type")?
+                .unwrap_or("application/octet-stream")
+                .to_string(),
+        });
+    } else if parameters.contains_key("replace_content_type") {
+        bail!("Parameter 'replace_content_type' requires 'replace_body'");
     }
     if boolean(parameters, "malformed_json")?.unwrap_or(false) {
         faults.push(HttpFaultType::MalformedJson);
@@ -798,6 +810,39 @@ mod tests {
             let scenario = crate::parse_scenario_from_str(yaml, "yaml").unwrap();
             for injection in scenario.phases.iter().flat_map(|phase| &phase.injections) {
                 assert!(build_injector(injection).unwrap().is_some());
+            }
+        }
+    }
+
+    #[test]
+    fn every_downloadable_scenario_pack_parses_and_builds() {
+        fn yaml_files(directory: &std::path::Path, files: &mut Vec<std::path::PathBuf>) {
+            for entry in std::fs::read_dir(directory).unwrap() {
+                let path = entry.unwrap().path();
+                if path.is_dir() {
+                    yaml_files(&path, files);
+                } else if matches!(
+                    path.extension().and_then(|value| value.to_str()),
+                    Some("yaml" | "yml")
+                ) {
+                    files.push(path);
+                }
+            }
+        }
+
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../scenario-packs");
+        let mut files = Vec::new();
+        yaml_files(&root, &mut files);
+        assert!(files.len() >= 30, "expected the complete scenario catalog");
+
+        for file in files {
+            let yaml = std::fs::read_to_string(&file).unwrap();
+            let scenario = crate::parse_scenario_from_str(&yaml, "yaml")
+                .unwrap_or_else(|error| panic!("{}: {}", file.display(), error));
+            for injection in scenario.phases.iter().flat_map(|phase| &phase.injections) {
+                build_injector(injection).unwrap_or_else(|error| {
+                    panic!("{} ({}): {}", file.display(), injection.r#type, error)
+                });
             }
         }
     }

@@ -1,0 +1,16 @@
+name: nats_duplicate_delivery
+description: Duplicate selected downstream NATS protocol frames.
+duration: 90s
+labels:
+  pack: queues
+  protocol: nats
+phases:
+  - name: duplicate_frames
+    duration: 90s
+    injections:
+      - type: dependency_proxy
+        target:
+          address: 127.0.0.1:4222
+        listen: 127.0.0.1:14222
+        direction: downstream
+        duplicate_rate: 0.08

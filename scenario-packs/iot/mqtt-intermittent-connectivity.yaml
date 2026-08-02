@@ -1,0 +1,17 @@
+name: mqtt_intermittent_connectivity
+description: Close a percentage of MQTT connections after two seconds.
+duration: 2m
+labels:
+  pack: iot
+  protocol: mqtt
+phases:
+  - name: intermittent_devices
+    duration: 2m
+    injections:
+      - type: dependency_proxy
+        target:
+          address: 127.0.0.1:1883
+        listen: 127.0.0.1:11883
+        direction: both
+        toxicity: 0.3
+        timeout: 2s

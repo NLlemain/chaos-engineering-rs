@@ -1,0 +1,20 @@
+name: hls_missing_segments
+description: Return HTTP 404 for a percentage of HLS media segment requests.
+duration: 2m
+labels:
+  pack: media
+  protocol: hls
+phases:
+  - name: segments_disappear
+    duration: 2m
+    injections:
+      - type: http_fault
+        target:
+          system: true
+        listen: 127.0.0.1:18101
+        upstream: http://127.0.0.1:8080
+        provider: generic
+        path_pattern: /segments/*
+        rate: 0.25
+        status: 404
+        status_body: segment unavailable

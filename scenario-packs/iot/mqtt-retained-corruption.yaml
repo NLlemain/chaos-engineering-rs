@@ -1,0 +1,16 @@
+name: mqtt_retained_message_corruption
+description: Corrupt selected broker-to-device bytes, including retained delivery payloads.
+duration: 90s
+labels:
+  pack: iot
+  protocol: mqtt
+phases:
+  - name: corrupted_downstream_frames
+    duration: 90s
+    injections:
+      - type: dependency_proxy
+        target:
+          address: 127.0.0.1:1883
+        listen: 127.0.0.1:11883
+        direction: downstream
+        corruption_rate: 0.02

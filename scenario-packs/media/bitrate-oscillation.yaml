@@ -1,0 +1,34 @@
+name: media_bitrate_oscillation
+description: Alternate downstream bandwidth ceilings to force adaptive-bitrate switching.
+duration: 1m
+labels:
+  pack: media
+  protocol: hls-dash
+phases:
+  - name: constrained
+    duration: 20s
+    injections:
+      - type: dependency_proxy
+        target:
+          address: 127.0.0.1:8080
+        listen: 127.0.0.1:18103
+        direction: downstream
+        bandwidth_bps: 180000
+  - name: recovered
+    duration: 20s
+    injections:
+      - type: dependency_proxy
+        target:
+          address: 127.0.0.1:8080
+        listen: 127.0.0.1:18103
+        direction: downstream
+        bandwidth_bps: 4000000
+  - name: constrained_again
+    duration: 20s
+    injections:
+      - type: dependency_proxy
+        target:
+          address: 127.0.0.1:8080
+        listen: 127.0.0.1:18103
+        direction: downstream
+        bandwidth_bps: 250000

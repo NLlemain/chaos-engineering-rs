@@ -1,0 +1,19 @@
+name: webrtc_signaling_delay
+description: Delay WebRTC signaling requests without altering media packets.
+duration: 90s
+labels:
+  pack: media
+  protocol: webrtc-signaling
+phases:
+  - name: delayed_signaling
+    duration: 90s
+    injections:
+      - type: http_fault
+        target:
+          system: true
+        listen: 127.0.0.1:18104
+        upstream: http://127.0.0.1:8080
+        provider: generic
+        path_pattern: /signaling/*
+        latency: 2500ms
+        rate: 0.7

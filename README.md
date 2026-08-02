@@ -134,6 +134,20 @@ chaos report chaos.json --compare baseline.json
 
 SLO probes run throughout the scenario. Cleanup and report writes finish before a failed assertion returns a nonzero CI exit code. Prometheus serves live metrics at `/metrics`; OTLP uses HTTP/JSON metrics export and honors `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`. Report comparison shows injection success, duration, probe error-rate, and SLO-gate deltas.
 
+### Search and Download Scenario Packs
+
+Protocol support is shipped as scenario packs so the core stays small and reusable:
+
+```bash
+chaos pack list
+chaos pack list --category media
+chaos pack list --search mqtt
+chaos pack show hls-stale-manifest
+chaos pack install hls-stale-manifest
+```
+
+The machine-readable catalog at `scenario-packs/catalog.json` includes status, protocols, requirements, and download URLs. Current categories cover AI providers, authentication, containers, databases, media streaming, Kafka/RabbitMQ/NATS, MQTT/IoT, DNS, and object storage. Planned capabilities remain searchable but cannot be installed until they produce an honest real-world effect.
+
 ## 📦 Chaos Injectors (23 Total)
 
 | Injector | Category | Description | Status |

@@ -6,6 +6,7 @@ pub mod dns_proxy;
 pub mod doctor;
 pub mod dry_run;
 pub mod list;
+pub mod pack;
 pub mod proxy;
 pub mod recover;
 pub mod report;
