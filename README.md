@@ -31,6 +31,14 @@ cargo build --locked --release -p chaos_cli
 ./target/release/chaos list
 ```
 
+Homebrew is available now:
+
+```bash
+brew install Ninian-Lemain/chaos-engineering/chaos-engineering-rs
+```
+
+The [WinGet submission](https://github.com/microsoft/winget-pkgs/pull/411247) is awaiting Microsoft review. After merge, install it with `winget install NinianLemain.ChaosEngineeringRs`.
+
 On Windows, run `target\release\chaos.exe`. Before an experiment:
 
 ```bash
@@ -157,9 +165,9 @@ Integration tests verify that stable effects disrupt their target and restore re
 | GitHub binaries | Release workflow builds Windows x64, Linux x64, macOS x64/arm64 with SHA-256 files and GitHub attestations |
 | GitHub Action | `action.yml` runs a scenario as an SLO gate on Windows, Linux, and macOS |
 | Container | GHCR workflow builds amd64/arm64 images |
-| Homebrew | Formula is rendered with release checksums; tap publication follows the release |
-| WinGet | Manifest is rendered and validated before submission to `winget-pkgs` |
-| crates.io | Publish workflow is ready; it requires the repository `CARGO_REGISTRY_TOKEN` secret |
+| Homebrew | Live at [`Ninian-Lemain/homebrew-chaos-engineering`](https://github.com/Ninian-Lemain/homebrew-chaos-engineering) |
+| WinGet | [Validated manifest submitted](https://github.com/microsoft/winget-pkgs/pull/411247); awaiting Microsoft review |
+| crates.io | Publish workflow is ready; the first release requires a personal `CARGO_REGISTRY_TOKEN` |
 
 Verify a downloaded release artifact with GitHub CLI:
 
