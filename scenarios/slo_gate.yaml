@@ -1,0 +1,18 @@
+name: api_slo_gate
+description: Probe an application throughout the experiment and fail CI when its SLO is exceeded.
+duration: 10s
+labels:
+  purpose: ci-gate
+phases:
+  - name: observation_window
+    duration: 10s
+    injections: []
+assertions:
+  - name: api_availability
+    url: http://127.0.0.1:8080/health
+    expected_status: 200
+    interval: 500ms
+    timeout: 1s
+    max_error_rate: 0.05
+    max_p95_latency: 250ms
+    min_requests: 10

@@ -1,5 +1,6 @@
 pub mod json;
 pub mod markdown;
+pub mod otlp;
 pub mod prometheus;
 
 pub use json::JsonExporter;

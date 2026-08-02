@@ -11,5 +11,6 @@ pub mod recover;
 pub mod report;
 pub mod run;
 pub mod serve;
+pub mod telemetry;
 pub mod tls_endpoint;
 pub mod validate;

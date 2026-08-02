@@ -1,20 +1,217 @@
 use crate::{
-    config::{InjectionConfig, Scenario},
+    config::{InjectionConfig, Scenario, SloAssertionConfig},
     injector_factory::build_injector,
     scheduler::{Scheduler, SchedulingMode},
 };
 use chaos_core::{Executor, InjectionHandle, RecoveryJournal};
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
+    time::Duration,
+};
+use tokio::sync::Mutex;
 use tokio::time::Instant;
+use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
+
+#[derive(Default)]
+pub struct RunTelemetry {
+    active: AtomicU64,
+    injections_attempted: AtomicU64,
+    injections_succeeded: AtomicU64,
+    cleanup_failures: AtomicU64,
+    probes_total: AtomicU64,
+    probes_failed: AtomicU64,
+}
+
+impl RunTelemetry {
+    pub fn snapshot(&self) -> RunTelemetrySnapshot {
+        RunTelemetrySnapshot {
+            active: self.active.load(Ordering::Relaxed) != 0,
+            injections_attempted: self.injections_attempted.load(Ordering::Relaxed),
+            injections_succeeded: self.injections_succeeded.load(Ordering::Relaxed),
+            cleanup_failures: self.cleanup_failures.load(Ordering::Relaxed),
+            probes_total: self.probes_total.load(Ordering::Relaxed),
+            probes_failed: self.probes_failed.load(Ordering::Relaxed),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, serde::Serialize, serde::Deserialize)]
+pub struct RunTelemetrySnapshot {
+    pub active: bool,
+    pub injections_attempted: u64,
+    pub injections_succeeded: u64,
+    pub cleanup_failures: u64,
+    pub probes_total: u64,
+    pub probes_failed: u64,
+}
+
+struct ProbeSet {
+    cancellation: CancellationToken,
+    tasks: Vec<tokio::task::JoinHandle<SloResult>>,
+}
+
+impl ProbeSet {
+    fn start(
+        assertions: &[SloAssertionConfig],
+        telemetry: Arc<RunTelemetry>,
+    ) -> anyhow::Result<Self> {
+        let cancellation = CancellationToken::new();
+        let client = reqwest::Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()?;
+        let tasks = assertions
+            .iter()
+            .cloned()
+            .map(|assertion| {
+                let task_cancellation = cancellation.clone();
+                let task_client = client.clone();
+                let task_telemetry = telemetry.clone();
+                tokio::spawn(async move {
+                    run_probe(assertion, task_client, task_cancellation, task_telemetry).await
+                })
+            })
+            .collect();
+        Ok(Self {
+            cancellation,
+            tasks,
+        })
+    }
+
+    async fn finish(self) -> Vec<SloResult> {
+        self.cancellation.cancel();
+        let mut results = Vec::with_capacity(self.tasks.len());
+        for task in self.tasks {
+            match task.await {
+                Ok(result) => results.push(result),
+                Err(error) => results.push(SloResult {
+                    name: "probe-task".to_string(),
+                    total_requests: 0,
+                    failed_requests: 0,
+                    error_rate: 1.0,
+                    latency_p95: Duration::ZERO,
+                    passed: false,
+                    violations: vec![format!("Probe task failed: {}", error)],
+                }),
+            }
+        }
+        results
+    }
+}
+
+async fn run_probe(
+    assertion: SloAssertionConfig,
+    client: reqwest::Client,
+    cancellation: CancellationToken,
+    telemetry: Arc<RunTelemetry>,
+) -> SloResult {
+    let samples = Arc::new(Mutex::new(ProbeSamples::default()));
+    loop {
+        let started = Instant::now();
+        let response = tokio::time::timeout(assertion.timeout, client.get(&assertion.url).send());
+        let outcome = tokio::select! {
+            _ = cancellation.cancelled() => break,
+            outcome = response => outcome,
+        };
+        let failed = !matches!(outcome, Ok(Ok(response)) if response.status().as_u16() == assertion.expected_status);
+        telemetry.probes_total.fetch_add(1, Ordering::Relaxed);
+        if failed {
+            telemetry.probes_failed.fetch_add(1, Ordering::Relaxed);
+        }
+        {
+            let mut samples = samples.lock().await;
+            samples.latencies.push(started.elapsed());
+            samples.failures += usize::from(failed);
+        }
+        tokio::select! {
+            _ = cancellation.cancelled() => break,
+            _ = tokio::time::sleep(assertion.interval) => {}
+        }
+    }
+    let completed_samples = samples.lock().await.clone();
+    evaluate_slo(&assertion, completed_samples)
+}
+
+#[derive(Clone, Default)]
+struct ProbeSamples {
+    latencies: Vec<Duration>,
+    failures: usize,
+}
+
+fn evaluate_slo(assertion: &SloAssertionConfig, mut samples: ProbeSamples) -> SloResult {
+    samples.latencies.sort();
+    let total_requests = samples.latencies.len();
+    let error_rate = if total_requests == 0 {
+        1.0
+    } else {
+        samples.failures as f64 / total_requests as f64
+    };
+    let latency_p95 = percentile(&samples.latencies, 0.95);
+    let mut violations = Vec::new();
+    if total_requests < assertion.min_requests {
+        violations.push(format!(
+            "Only {} probe(s) completed; at least {} required",
+            total_requests, assertion.min_requests
+        ));
+    }
+    if error_rate > assertion.max_error_rate {
+        violations.push(format!(
+            "Error rate {:.4} exceeded {:.4}",
+            error_rate, assertion.max_error_rate
+        ));
+    }
+    if assertion
+        .max_p95_latency
+        .is_some_and(|threshold| latency_p95 > threshold)
+    {
+        violations.push(format!(
+            "p95 latency {:?} exceeded {:?}",
+            latency_p95,
+            assertion.max_p95_latency.unwrap_or_default()
+        ));
+    }
+    SloResult {
+        name: assertion.name.clone(),
+        total_requests,
+        failed_requests: samples.failures,
+        error_rate,
+        latency_p95,
+        passed: violations.is_empty(),
+        violations,
+    }
+}
+
+fn percentile(samples: &[Duration], quantile: f64) -> Duration {
+    if samples.is_empty() {
+        return Duration::ZERO;
+    }
+    let index = ((samples.len() as f64 * quantile).ceil() as usize)
+        .saturating_sub(1)
+        .min(samples.len() - 1);
+    samples[index]
+}
 
 pub struct ScenarioRunner {
     executor: Executor,
+    telemetry: Arc<RunTelemetry>,
 }
 
 impl ScenarioRunner {
     pub fn new(executor: Executor) -> Self {
-        Self { executor }
+        Self {
+            executor,
+            telemetry: Arc::new(RunTelemetry::default()),
+        }
+    }
+
+    pub fn with_telemetry(executor: Executor, telemetry: Arc<RunTelemetry>) -> Self {
+        Self {
+            executor,
+            telemetry,
+        }
     }
 
     pub fn with_defaults() -> Self {
@@ -25,9 +222,23 @@ impl ScenarioRunner {
         Self::new(Executor::with_defaults_and_journal(journal))
     }
 
+    pub fn with_journal_and_telemetry(
+        journal: Arc<RecoveryJournal>,
+        telemetry: Arc<RunTelemetry>,
+    ) -> Self {
+        Self::with_telemetry(Executor::with_defaults_and_journal(journal), telemetry)
+    }
+
+    pub fn telemetry(&self) -> Arc<RunTelemetry> {
+        self.telemetry.clone()
+    }
+
     pub async fn run(&self, scenario: &Scenario) -> anyhow::Result<ScenarioResult> {
         info!("Starting scenario: {}", scenario.name);
         scenario.validate().map_err(|e| anyhow::anyhow!(e))?;
+
+        self.telemetry.active.store(1, Ordering::Relaxed);
+        let probes = ProbeSet::start(&scenario.assertions, self.telemetry.clone())?;
 
         let started_at = chrono::Utc::now();
         let start_time = Instant::now();
@@ -74,11 +285,17 @@ impl ScenarioRunner {
             // Apply injections
             for injection in &scheduled_phase.phase.injections {
                 total_attempted += 1;
+                self.telemetry
+                    .injections_attempted
+                    .fetch_add(1, Ordering::Relaxed);
                 match self.apply_injection(injection).await {
                     Ok(handle) => {
                         info!("Applied injection: {}", injection.r#type);
                         handles.push(handle);
                         total_succeeded += 1;
+                        self.telemetry
+                            .injections_succeeded
+                            .fetch_add(1, Ordering::Relaxed);
                     }
                     Err(e) => {
                         warn!("Failed to apply injection '{}': {}", injection.r#type, e);
@@ -102,6 +319,9 @@ impl ScenarioRunner {
                 if let Err(e) = self.executor.remove(handle.clone()).await {
                     warn!("Failed to remove injection '{}': {}", handle.id, e);
                     total_cleanup_failures += 1;
+                    self.telemetry
+                        .cleanup_failures
+                        .fetch_add(1, Ordering::Relaxed);
                     cleanup_failures.push(InjectionFailure {
                         injection_type: handle.injector_name.clone(),
                         error: e.to_string(),
@@ -127,6 +347,9 @@ impl ScenarioRunner {
         }
 
         let total_duration = start_time.elapsed();
+        let slo_results = probes.finish().await;
+        self.telemetry.active.store(0, Ordering::Relaxed);
+        let telemetry = self.telemetry.snapshot();
 
         info!(
             "Scenario '{}' completed in {:?}",
@@ -141,6 +364,8 @@ impl ScenarioRunner {
             total_injections: total_succeeded,
             attempted_injections: total_attempted,
             cleanup_failures: total_cleanup_failures,
+            slo_results,
+            telemetry,
         })
     }
 
@@ -175,6 +400,10 @@ pub struct ScenarioResult {
     pub attempted_injections: usize,
     #[serde(default)]
     pub cleanup_failures: usize,
+    #[serde(default)]
+    pub slo_results: Vec<SloResult>,
+    #[serde(default)]
+    pub telemetry: RunTelemetrySnapshot,
 }
 
 impl ScenarioResult {
@@ -200,6 +429,23 @@ impl ScenarioResult {
         let total: Duration = self.phase_results.iter().map(|p| p.duration).sum();
         total / self.phase_results.len() as u32
     }
+
+    pub fn slos_passed(&self) -> bool {
+        self.slo_results.iter().all(|result| result.passed)
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct SloResult {
+    pub name: String,
+    pub total_requests: usize,
+    pub failed_requests: usize,
+    pub error_rate: f64,
+    #[serde(with = "humantime_serde")]
+    pub latency_p95: Duration,
+    pub passed: bool,
+    #[serde(default)]
+    pub violations: Vec<String>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -250,6 +496,33 @@ mod humantime_serde {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tokio::io::AsyncWriteExt;
+
+    async fn status_server(status: u16) -> (String, CancellationToken) {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let cancellation = CancellationToken::new();
+        let shutdown = cancellation.clone();
+        tokio::spawn(async move {
+            loop {
+                let accepted = tokio::select! {
+                    _ = shutdown.cancelled() => break,
+                    accepted = listener.accept() => accepted,
+                };
+                let Ok((mut stream, _)) = accepted else {
+                    continue;
+                };
+                tokio::spawn(async move {
+                    let response = format!(
+                        "HTTP/1.1 {} Test\r\ncontent-length: 0\r\nconnection: close\r\n\r\n",
+                        status
+                    );
+                    let _ = stream.write_all(response.as_bytes()).await;
+                });
+            }
+        });
+        (format!("http://{}", address), cancellation)
+    }
 
     #[test]
     fn test_scenario_runner_creation() {
@@ -286,9 +559,45 @@ mod tests {
             total_injections: 3,
             attempted_injections: 4,
             cleanup_failures: 0,
+            slo_results: vec![],
+            telemetry: RunTelemetrySnapshot::default(),
         };
 
         assert_eq!(result.success_rate(), 0.75);
         assert_eq!(result.average_phase_duration(), Duration::from_secs(50));
+    }
+
+    #[tokio::test]
+    async fn failing_http_slo_is_recorded_in_result() {
+        let (url, stop_server) = status_server(503).await;
+        let scenario = Scenario::builder()
+            .name("slo failure")
+            .add_phase(
+                crate::config::Phase::builder()
+                    .name("observe")
+                    .duration(Duration::from_millis(150))
+                    .build(),
+            )
+            .add_assertion(SloAssertionConfig {
+                name: "availability".to_string(),
+                url,
+                expected_status: 200,
+                interval: Duration::from_millis(20),
+                timeout: Duration::from_millis(50),
+                max_error_rate: 0.0,
+                max_p95_latency: Some(Duration::from_millis(100)),
+                min_requests: 3,
+            })
+            .build();
+
+        let result = ScenarioRunner::with_defaults()
+            .run(&scenario)
+            .await
+            .unwrap();
+        assert!(!result.slos_passed());
+        assert!(result.slo_results[0].total_requests >= 3);
+        assert_eq!(result.slo_results[0].error_rate, 1.0);
+        assert!(!result.slo_results[0].violations.is_empty());
+        stop_server.cancel();
     }
 }

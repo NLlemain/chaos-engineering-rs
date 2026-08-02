@@ -113,6 +113,27 @@ chaos proxy --upstream 127.0.0.1:5432 --listen 127.0.0.1:15432 --max-connections
 
 File-backed DuckDB and SQLite faults include byte-preserving unavailability, read-only permissions, advisory locks, real neighboring I/O pressure, and controlled inode pressure. PostgreSQL and MySQL use the protocol-agnostic proxy for disconnects, delayed responses, and connection-pool exhaustion. Ready-to-edit profiles live in `scenario-packs/databases/`.
 
+### Gate CI With SLOs and Export Metrics
+
+```yaml
+assertions:
+  - name: api_availability
+    url: http://127.0.0.1:8080/health
+    interval: 500ms
+    timeout: 1s
+    max_error_rate: 0.05
+    max_p95_latency: 250ms
+    min_requests: 10
+```
+
+```bash
+chaos run scenarios/slo_gate.yaml --output-json chaos.json --prometheus-port 9898
+chaos run scenarios/slo_gate.yaml --otlp-endpoint http://localhost:4318
+chaos report chaos.json --compare baseline.json
+```
+
+SLO probes run throughout the scenario. Cleanup and report writes finish before a failed assertion returns a nonzero CI exit code. Prometheus serves live metrics at `/metrics`; OTLP uses HTTP/JSON metrics export and honors `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`. Report comparison shows injection success, duration, probe error-rate, and SLO-gate deltas.
+
 ## 📦 Chaos Injectors (23 Total)
 
 | Injector | Category | Description | Status |

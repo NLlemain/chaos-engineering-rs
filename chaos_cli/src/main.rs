@@ -45,6 +45,10 @@ enum Commands {
         #[arg(short, long)]
         prometheus_port: Option<u16>,
 
+        /// Export final metrics using OTLP/HTTP JSON
+        #[arg(long, env = "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT")]
+        otlp_endpoint: Option<String>,
+
         /// Override scenario seed
         #[arg(long)]
         seed: Option<u64>,
@@ -187,6 +191,7 @@ async fn main() -> anyhow::Result<()> {
             output_html,
             output_markdown,
             prometheus_port,
+            otlp_endpoint,
             seed,
         } => {
             commands::run::execute(
@@ -195,6 +200,7 @@ async fn main() -> anyhow::Result<()> {
                 output_html,
                 output_markdown,
                 prometheus_port,
+                otlp_endpoint,
                 seed,
             )
             .await?;

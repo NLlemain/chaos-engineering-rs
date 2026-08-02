@@ -1,6 +1,7 @@
 use anyhow::{bail, Result};
 use chaos_core::RecoveryJournal;
-use chaos_scenarios::{parse_scenario_from_file, ScenarioRunner};
+use chaos_metrics::exporters::otlp::OtlpHttpExporter;
+use chaos_scenarios::{parse_scenario_from_file, runner::RunTelemetry, ScenarioRunner};
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::{path::PathBuf, sync::Arc};
@@ -12,12 +13,9 @@ pub async fn execute(
     output_html: Option<PathBuf>,
     output_markdown: Option<PathBuf>,
     prometheus_port: Option<u16>,
+    otlp_endpoint: Option<String>,
     seed: Option<u64>,
 ) -> Result<()> {
-    if let Some(port) = prometheus_port {
-        bail!("Prometheus export on port {} is not implemented yet; use JSON, Markdown, or HTML output", port);
-    }
-
     println!("{}", "=== Chaos Framework ===".bold().cyan());
     println!("Loading scenario: {}", scenario_file.display());
 
@@ -56,7 +54,15 @@ pub async fn execute(
 
     // Run scenario
     let journal = Arc::new(RecoveryJournal::new(RecoveryJournal::default_path()));
-    let runner = ScenarioRunner::with_journal(journal);
+    let telemetry = Arc::new(RunTelemetry::default());
+    let runner = ScenarioRunner::with_journal_and_telemetry(journal, telemetry.clone());
+    let prometheus = if let Some(port) = prometheus_port {
+        let server = super::telemetry::PrometheusServer::start(port, telemetry).await?;
+        println!("Prometheus: http://{}/metrics", server.address);
+        Some(server)
+    } else {
+        None
+    };
 
     // Spawn progress updater
     let pb_clone = pb.clone();
@@ -75,7 +81,15 @@ pub async fn execute(
 
     let result = runner.run(&scenario).await;
     progress_task.abort();
-    let result = result?;
+    let result = match result {
+        Ok(result) => result,
+        Err(error) => {
+            if let Some(server) = prometheus {
+                server.shutdown().await?;
+            }
+            return Err(error);
+        }
+    };
 
     pb.finish_and_clear();
 
@@ -98,6 +112,25 @@ pub async fn execute(
         );
     }
 
+    if !result.slo_results.is_empty() {
+        println!("\n{}", "SLO Assertions:".bold());
+        for slo in &result.slo_results {
+            let status = if slo.passed {
+                "PASS".green()
+            } else {
+                "FAIL".red()
+            };
+            println!(
+                "  {} {} - {} probes, {:.2}% errors, p95 {:?}",
+                status,
+                slo.name,
+                slo.total_requests,
+                slo.error_rate * 100.0,
+                slo.latency_p95
+            );
+        }
+    }
+
     // Save outputs
     if let Some(json_path) = output_json {
         println!("\nSaving JSON report to: {}", json_path.display());
@@ -115,6 +148,19 @@ pub async fn execute(
         println!("Generating Markdown report to: {}", md_path.display());
         let markdown = super::report::generate_markdown_report(&result);
         tokio::fs::write(&md_path, markdown).await?;
+    }
+
+    if let Some(endpoint) = otlp_endpoint {
+        OtlpHttpExporter::export(&endpoint, &result.scenario_name, &result.telemetry).await?;
+        println!("OTLP metrics exported to {}", endpoint);
+    }
+
+    if let Some(server) = prometheus {
+        server.shutdown().await?;
+    }
+
+    if !result.slos_passed() {
+        bail!("One or more SLO assertions failed");
     }
 
     println!(

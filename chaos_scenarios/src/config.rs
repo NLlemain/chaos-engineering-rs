@@ -17,6 +17,42 @@ pub struct Scenario {
     pub phases: Vec<Phase>,
     #[serde(default)]
     pub labels: HashMap<String, String>,
+    #[serde(default)]
+    pub assertions: Vec<SloAssertionConfig>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SloAssertionConfig {
+    pub name: String,
+    pub url: String,
+    #[serde(default = "default_expected_status")]
+    pub expected_status: u16,
+    #[serde(with = "humantime_serde", default = "default_probe_interval")]
+    pub interval: Duration,
+    #[serde(with = "humantime_serde", default = "default_probe_timeout")]
+    pub timeout: Duration,
+    #[serde(default)]
+    pub max_error_rate: f64,
+    #[serde(with = "humantime_serde_option", default)]
+    pub max_p95_latency: Option<Duration>,
+    #[serde(default = "default_min_requests")]
+    pub min_requests: usize,
+}
+
+fn default_expected_status() -> u16 {
+    200
+}
+
+fn default_probe_interval() -> Duration {
+    Duration::from_secs(1)
+}
+
+fn default_probe_timeout() -> Duration {
+    Duration::from_secs(2)
+}
+
+fn default_min_requests() -> usize {
+    1
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -172,6 +208,44 @@ impl Scenario {
             }
         }
 
+        for assertion in &self.assertions {
+            if assertion.name.trim().is_empty() {
+                return Err("SLO assertion name cannot be empty".to_string());
+            }
+            if !assertion.url.starts_with("http://") && !assertion.url.starts_with("https://") {
+                return Err(format!(
+                    "SLO assertion '{}' URL must use http or https",
+                    assertion.name
+                ));
+            }
+            if !(100..=599).contains(&assertion.expected_status) {
+                return Err(format!(
+                    "SLO assertion '{}' has an invalid expected status",
+                    assertion.name
+                ));
+            }
+            if assertion.interval.is_zero() || assertion.timeout.is_zero() {
+                return Err(format!(
+                    "SLO assertion '{}' interval and timeout must be greater than zero",
+                    assertion.name
+                ));
+            }
+            if !assertion.max_error_rate.is_finite()
+                || !(0.0..=1.0).contains(&assertion.max_error_rate)
+            {
+                return Err(format!(
+                    "SLO assertion '{}' max_error_rate must be between 0.0 and 1.0",
+                    assertion.name
+                ));
+            }
+            if assertion.min_requests == 0 {
+                return Err(format!(
+                    "SLO assertion '{}' min_requests must be greater than zero",
+                    assertion.name
+                ));
+            }
+        }
+
         Ok(())
     }
 }
@@ -185,6 +259,7 @@ pub struct ScenarioBuilder {
     ramp_up: Option<Duration>,
     phases: Vec<Phase>,
     labels: HashMap<String, String>,
+    assertions: Vec<SloAssertionConfig>,
 }
 
 impl ScenarioBuilder {
@@ -223,6 +298,11 @@ impl ScenarioBuilder {
         self
     }
 
+    pub fn add_assertion(mut self, assertion: SloAssertionConfig) -> Self {
+        self.assertions.push(assertion);
+        self
+    }
+
     pub fn build(self) -> Scenario {
         let duration = self
             .duration
@@ -236,6 +316,7 @@ impl ScenarioBuilder {
             ramp_up: self.ramp_up,
             phases: self.phases,
             labels: self.labels,
+            assertions: self.assertions,
         }
     }
 }
