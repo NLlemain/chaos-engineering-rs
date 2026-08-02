@@ -16,7 +16,7 @@ use std::{
         atomic::{AtomicU64, Ordering},
         Arc,
     },
-    time::Duration,
+    time::{Duration, Instant},
 };
 use tokio::{sync::Mutex, task::JoinHandle};
 use tokio_util::sync::CancellationToken;
@@ -201,12 +201,18 @@ impl DatabaseFaultInjector {
         let task_bytes = bytes_written.clone();
         let task = tokio::task::spawn_blocking(move || {
             let buffer = vec![0x5au8; bytes_per_cycle];
+            let cycles = ((64 * 1024 * 1024) / bytes_per_cycle).clamp(1, 16);
+            let working_set_size = (bytes_per_cycle * cycles) as u64;
+            let mut offset = 0;
             while !shutdown.is_cancelled() {
-                file.seek(SeekFrom::Start(0))?;
+                file.seek(SeekFrom::Start(offset))?;
                 file.write_all(&buffer)?;
-                file.sync_data()?;
+                file.flush()?;
                 task_bytes.fetch_add(buffer.len() as u64, Ordering::Relaxed);
-                std::thread::sleep(cycle_delay);
+                offset = (offset + buffer.len() as u64) % working_set_size;
+                if wait_for_cycle_or_cancelled(&shutdown, cycle_delay) {
+                    break;
+                }
             }
             Ok(())
         });
@@ -258,6 +264,19 @@ impl DatabaseFaultInjector {
                 "engine": self.config.engine,
             }),
         ))
+    }
+}
+
+fn wait_for_cycle_or_cancelled(shutdown: &CancellationToken, delay: Duration) -> bool {
+    let started = Instant::now();
+    loop {
+        if shutdown.is_cancelled() {
+            return true;
+        }
+        let Some(remaining) = delay.checked_sub(started.elapsed()) else {
+            return false;
+        };
+        std::thread::sleep(remaining.min(Duration::from_millis(10)));
     }
 }
 
@@ -531,14 +550,17 @@ mod tests {
             engine: LocalDatabaseEngine::DuckDb,
             mode: DatabaseFaultMode::IoPressure {
                 bytes_per_cycle: 4096,
-                cycle_delay: Duration::from_millis(5),
+                cycle_delay: Duration::from_secs(3600),
             },
         });
         let handle = injector.inject(&Target::file(&database)).await.unwrap();
         tokio::time::sleep(Duration::from_millis(30)).await;
         assert!(injector.pressure_bytes(&handle.id).await.unwrap() >= 4096);
         let pressure = metadata_path(&handle, "pressure_path").unwrap();
-        injector.remove(handle).await.unwrap();
+        tokio::time::timeout(Duration::from_secs(1), injector.remove(handle))
+            .await
+            .expect("I/O pressure cancellation timed out")
+            .unwrap();
         assert!(!pressure.exists());
         std::fs::remove_dir_all(directory).unwrap();
     }
