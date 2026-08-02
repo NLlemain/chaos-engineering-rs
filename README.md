@@ -127,7 +127,7 @@ The default journal is `~/.chaos-engineering/recovery.json`. `doctor` reports mi
 
 ## Capability Matrix
 
-Status is part of the runtime registry and is limited to **stable**, **experimental**, or **planned**. `chaos list` is the source of truth for the current operating system; `chaos doctor` adds permission and dependency checks.
+Status is part of the runtime registry and is limited to **stable**, **experimental**, or **planned**. `chaos list` is the source of truth for the current operating system; `chaos list --json` exposes the same 24-entry registry to scripts, including each injector's required capabilities. `chaos doctor` adds permission and dependency checks.
 
 | Injector | Status | Real effect / requirement |
 |---|---|---|

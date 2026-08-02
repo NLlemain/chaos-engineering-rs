@@ -121,7 +121,11 @@ enum Commands {
     },
 
     /// List available injectors
-    List,
+    List {
+        /// Emit the runtime injector registry as JSON
+        #[arg(long)]
+        json: bool,
+    },
 
     /// Search and download protocol-specific scenario packs
     Pack(commands::pack::PackArgs),
@@ -241,8 +245,8 @@ async fn main() -> anyhow::Result<()> {
             commands::validate::execute(scenario_file).await?;
         }
 
-        Commands::List => {
-            commands::list::execute().await?;
+        Commands::List { json } => {
+            commands::list::execute(json).await?;
         }
         Commands::Pack(args) => {
             commands::pack::execute(args).await?;

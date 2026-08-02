@@ -2,11 +2,16 @@ use anyhow::Result;
 use chaos_core::{Executor, InjectorStatus};
 use colored::Colorize;
 
-pub async fn execute() -> Result<()> {
-    println!("{}", "=== Available Injectors ===".bold().cyan());
-
+pub async fn execute(json: bool) -> Result<()> {
     let executor = Executor::with_defaults();
     let injectors = executor.list_injector_info();
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&injectors)?);
+        return Ok(());
+    }
+
+    println!("{}", "=== Available Injectors ===".bold().cyan());
 
     println!("\nTotal injectors: {}\n", injectors.len());
 
