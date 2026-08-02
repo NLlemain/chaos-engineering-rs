@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 
 /// Target type for load testing
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -81,6 +81,8 @@ pub struct LoadTestState {
     pub total_requests: AtomicU64,
     pub successful_requests: AtomicU64,
     pub failed_requests: AtomicU64,
+    pub total_bytes: AtomicU64,
+    pub errors: RwLock<Vec<String>>,
 }
 
 impl LoadTestState {
@@ -95,13 +97,19 @@ impl LoadTestState {
             total_requests: AtomicU64::new(0),
             successful_requests: AtomicU64::new(0),
             failed_requests: AtomicU64::new(0),
+            total_bytes: AtomicU64::new(0),
+            errors: RwLock::new(Vec::new()),
         }
     }
 
-    pub fn reset(&self) {
+    pub async fn reset(&self) {
         self.total_requests.store(0, Ordering::SeqCst);
         self.successful_requests.store(0, Ordering::SeqCst);
         self.failed_requests.store(0, Ordering::SeqCst);
+        self.total_bytes.store(0, Ordering::SeqCst);
+        *self.metrics.write().await = LoadTestMetrics::default();
+        self.latencies.write().await.clear();
+        self.errors.write().await.clear();
     }
 }
 
@@ -110,68 +118,93 @@ pub async fn run_http_load_test(
     state: Arc<LoadTestState>,
     config: LoadTestConfig,
 ) -> anyhow::Result<LoadTestMetrics> {
-    state.is_running.store(true, Ordering::SeqCst);
-    state.should_stop.store(false, Ordering::SeqCst);
-    state.reset();
-
-    *state.config.write().await = Some(config.clone());
-    *state.start_time.write().await = Some(Instant::now());
-    *state.latencies.write().await = Vec::new();
+    validate_config(&config)?;
 
     let client = reqwest::Client::builder()
         .timeout(Duration::from_millis(config.timeout_ms))
         .build()?;
 
+    state.reset().await;
+    state.is_running.store(true, Ordering::SeqCst);
+    state.should_stop.store(false, Ordering::SeqCst);
+    *state.config.write().await = Some(config.clone());
+    *state.start_time.write().await = Some(Instant::now());
+
     let duration = Duration::from_secs(config.duration_secs);
-    let start = Instant::now();
     let ramp_up = Duration::from_secs(config.ramp_up_secs.unwrap_or(0));
+    let deadline = tokio::time::Instant::now() + duration;
+    let request_interval = Duration::from_secs_f64(1.0 / config.requests_per_second as f64);
+    let mut interval = tokio::time::interval(request_interval);
+    interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+    let rate_limiter = Arc::new(Mutex::new(interval));
 
-    let delay_between_requests = if config.requests_per_second > 0 {
-        Duration::from_micros(1_000_000 / config.requests_per_second as u64)
-    } else {
-        Duration::from_millis(10)
-    };
-
-    let mut handles = Vec::new();
-    let mut current_users = 0u32;
-    let target_users = config.concurrent_users;
-
-    while start.elapsed() < duration && !state.should_stop.load(Ordering::SeqCst) {
-        // Ramp up users
-        let elapsed_ratio = if ramp_up.as_secs() > 0 {
-            (start.elapsed().as_secs_f64() / ramp_up.as_secs_f64()).min(1.0)
+    let mut workers = Vec::with_capacity(config.concurrent_users as usize);
+    for user_index in 0..config.concurrent_users {
+        let client = client.clone();
+        let config = config.clone();
+        let state = state.clone();
+        let rate_limiter = rate_limiter.clone();
+        let start_delay = if ramp_up.is_zero() {
+            Duration::ZERO
         } else {
-            1.0
+            ramp_up.mul_f64(user_index as f64 / config.concurrent_users as f64)
         };
-        let desired_users = ((target_users as f64) * elapsed_ratio) as u32;
 
-        while current_users < desired_users && current_users < target_users {
-            let client = client.clone();
-            let config = config.clone();
-            let state = state.clone();
+        workers.push(tokio::spawn(async move {
+            tokio::time::sleep(start_delay).await;
+            loop {
+                if state.should_stop.load(Ordering::SeqCst)
+                    || tokio::time::Instant::now() >= deadline
+                {
+                    break;
+                }
 
-            let handle = tokio::spawn(async move { make_request(&client, &config, &state).await });
-            handles.push(handle);
-            current_users += 1;
-        }
-
-        // Update metrics periodically
-        update_metrics(&state).await;
-
-        tokio::time::sleep(delay_between_requests).await;
+                rate_limiter.lock().await.tick().await;
+                if state.should_stop.load(Ordering::SeqCst)
+                    || tokio::time::Instant::now() >= deadline
+                {
+                    break;
+                }
+                make_request(&client, &config, &state).await;
+            }
+        }));
     }
 
-    // Wait for all requests to complete
-    for handle in handles {
-        let _ = handle.await;
+    for worker in workers {
+        if let Err(error) = worker.await {
+            record_error(&state, format!("Load worker failed: {}", error)).await;
+        }
     }
 
     state.is_running.store(false, Ordering::SeqCst);
-
-    // Final metrics update
     update_metrics(&state).await;
 
     Ok(state.metrics.read().await.clone())
+}
+
+pub(crate) fn validate_config(config: &LoadTestConfig) -> anyhow::Result<()> {
+    if !matches!(config.target_type, TargetType::Http | TargetType::Hls) {
+        anyhow::bail!("Only HTTP/HTTPS and HLS targets are currently supported");
+    }
+    if config.concurrent_users == 0 {
+        anyhow::bail!("concurrent_users must be greater than zero");
+    }
+    if config.requests_per_second == 0 || config.requests_per_second > 1_000_000 {
+        anyhow::bail!("requests_per_second must be between 1 and 1,000,000");
+    }
+    if config.duration_secs == 0 || config.timeout_ms == 0 {
+        anyhow::bail!("duration_secs and timeout_ms must be greater than zero");
+    }
+    if config.ramp_up_secs.unwrap_or(0) > config.duration_secs {
+        anyhow::bail!("ramp_up_secs cannot exceed duration_secs");
+    }
+
+    let url = reqwest::Url::parse(&config.url)?;
+    if !matches!(url.scheme(), "http" | "https") {
+        anyhow::bail!("Load test URL must use http or https");
+    }
+    reqwest::Method::from_bytes(config.method.as_deref().unwrap_or("GET").as_bytes())?;
+    Ok(())
 }
 
 async fn make_request(
@@ -180,14 +213,9 @@ async fn make_request(
     state: &Arc<LoadTestState>,
 ) {
     let start = Instant::now();
-
-    let mut request = match config.method.as_deref().unwrap_or("GET") {
-        "POST" => client.post(&config.url),
-        "PUT" => client.put(&config.url),
-        "DELETE" => client.delete(&config.url),
-        "PATCH" => client.patch(&config.url),
-        _ => client.get(&config.url),
-    };
+    let method = reqwest::Method::from_bytes(config.method.as_deref().unwrap_or("GET").as_bytes())
+        .unwrap_or(reqwest::Method::GET);
+    let mut request = client.request(method, &config.url);
 
     if let Some(headers) = &config.headers {
         for (key, value) in headers {
@@ -205,16 +233,45 @@ async fn make_request(
         Ok(response) => {
             let latency = start.elapsed().as_secs_f64() * 1000.0;
             state.latencies.write().await.push(latency);
+            let status = response.status();
 
-            if response.status().is_success() {
+            match response.bytes().await {
+                Ok(body) => {
+                    state
+                        .total_bytes
+                        .fetch_add(body.len() as u64, Ordering::SeqCst);
+                }
+                Err(error) => {
+                    state.failed_requests.fetch_add(1, Ordering::SeqCst);
+                    record_error(state, format!("Failed to read response body: {}", error)).await;
+                    return;
+                }
+            }
+
+            if status.is_success() {
                 state.successful_requests.fetch_add(1, Ordering::SeqCst);
             } else {
                 state.failed_requests.fetch_add(1, Ordering::SeqCst);
+                record_error(state, format!("HTTP response status: {}", status)).await;
             }
         }
-        Err(_e) => {
+        Err(error) => {
+            state
+                .latencies
+                .write()
+                .await
+                .push(start.elapsed().as_secs_f64() * 1000.0);
             state.failed_requests.fetch_add(1, Ordering::SeqCst);
+            record_error(state, format!("Request failed: {}", error)).await;
         }
+    }
+}
+
+async fn record_error(state: &Arc<LoadTestState>, error: String) {
+    const MAX_RECORDED_ERRORS: usize = 20;
+    let mut errors = state.errors.write().await;
+    if errors.len() < MAX_RECORDED_ERRORS && !errors.contains(&error) {
+        errors.push(error);
     }
 }
 
@@ -223,6 +280,8 @@ async fn update_metrics(state: &Arc<LoadTestState>) {
     let total = state.total_requests.load(Ordering::SeqCst);
     let successful = state.successful_requests.load(Ordering::SeqCst);
     let failed = state.failed_requests.load(Ordering::SeqCst);
+    let total_bytes = state.total_bytes.load(Ordering::SeqCst);
+    let errors = state.errors.read().await.clone();
 
     let start_time = state.start_time.read().await;
     let elapsed = start_time.map(|s| s.elapsed().as_secs_f64()).unwrap_or(1.0);
@@ -234,7 +293,7 @@ async fn update_metrics(state: &Arc<LoadTestState>) {
         total_requests: total,
         successful_requests: successful,
         failed_requests: failed,
-        total_bytes: 0,
+        total_bytes,
         min_latency_ms: sorted_latencies.first().copied().unwrap_or(0.0),
         max_latency_ms: sorted_latencies.last().copied().unwrap_or(0.0),
         avg_latency_ms: if !sorted_latencies.is_empty() {
@@ -246,7 +305,7 @@ async fn update_metrics(state: &Arc<LoadTestState>) {
         p95_latency_ms: percentile(&sorted_latencies, 95.0),
         p99_latency_ms: percentile(&sorted_latencies, 99.0),
         requests_per_second: total as f64 / elapsed,
-        errors: Vec::new(),
+        errors,
     };
 
     *state.metrics.write().await = metrics;
@@ -289,4 +348,64 @@ pub struct StreamTestMetrics {
     pub avg_latency_ms: f64,
     pub dropped_frames: u64,
     pub total_bytes_received: u64,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::{routing::get, Router};
+
+    #[test]
+    fn rejects_unsupported_target_type() {
+        let config = LoadTestConfig {
+            target_type: TargetType::Tcp,
+            ..LoadTestConfig::default()
+        };
+
+        assert!(validate_config(&config).is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_rate_and_ramp_up() {
+        let zero_rate = LoadTestConfig {
+            requests_per_second: 0,
+            ..LoadTestConfig::default()
+        };
+        assert!(validate_config(&zero_rate).is_err());
+
+        let excessive_ramp_up = LoadTestConfig {
+            duration_secs: 10,
+            ramp_up_secs: Some(11),
+            ..LoadTestConfig::default()
+        };
+        assert!(validate_config(&excessive_ramp_up).is_err());
+    }
+
+    #[tokio::test]
+    async fn sends_repeated_paced_requests_and_collects_bytes() {
+        let app = Router::new().route("/", get(|| async { "hello" }));
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+
+        let state = Arc::new(LoadTestState::new());
+        let config = LoadTestConfig {
+            name: "paced test".to_string(),
+            url: format!("http://{}/", address),
+            concurrent_users: 4,
+            requests_per_second: 20,
+            duration_secs: 1,
+            timeout_ms: 1_000,
+            ramp_up_secs: Some(0),
+            ..LoadTestConfig::default()
+        };
+
+        let metrics = run_http_load_test(state, config).await.unwrap();
+        server.abort();
+
+        assert!(metrics.total_requests >= 10, "{metrics:?}");
+        assert_eq!(metrics.successful_requests, metrics.total_requests);
+        assert_eq!(metrics.failed_requests, 0);
+        assert!(metrics.total_bytes >= metrics.total_requests * 5);
+    }
 }

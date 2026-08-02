@@ -1,6 +1,6 @@
 //! REST API endpoints
 
-use crate::load_test::{run_http_load_test, LoadTestConfig, LoadTestMetrics};
+use crate::load_test::{run_http_load_test, validate_config, LoadTestConfig, LoadTestMetrics};
 use crate::state::{AppState, CustomTarget, ResultSummary};
 use axum::{
     extract::{Path, State},
@@ -357,17 +357,31 @@ pub async fn start_load_test(
     State(state): State<Arc<AppState>>,
     Json(config): Json<LoadTestConfig>,
 ) -> Result<Json<RunResponse>, (StatusCode, String)> {
-    if state.load_test_state.is_running.load(Ordering::SeqCst) {
-        return Err((
-            StatusCode::CONFLICT,
-            "A load test is already running".to_string(),
-        ));
-    }
+    validate_config(&config).map_err(|error| {
+        (
+            StatusCode::BAD_REQUEST,
+            format!("Invalid load test: {}", error),
+        )
+    })?;
+
+    state
+        .load_test_state
+        .is_running
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .map_err(|_| {
+            (
+                StatusCode::CONFLICT,
+                "A load test is already running".to_string(),
+            )
+        })?;
 
     let load_state = state.load_test_state.clone();
 
     tokio::spawn(async move {
-        let _ = run_http_load_test(load_state, config).await;
+        if let Err(error) = run_http_load_test(load_state.clone(), config).await {
+            load_state.is_running.store(false, Ordering::SeqCst);
+            tracing::error!("Load test failed: {}", error);
+        }
     });
 
     Ok(Json(RunResponse {
