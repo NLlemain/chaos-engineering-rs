@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "chaos_control",
     "chaos_hft",
     "chaos_core",
     "chaos_scenarios",
@@ -25,6 +26,7 @@ readme = "README.md"
 # Async runtime
 tokio = { version = "1.35", features = ["full"] }
 tokio-util = { version = "0.7", features = ["full"] }
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }
 
 # Web frameworks
 axum = { version = "0.7", features = ["ws", "macros"] }
@@ -39,6 +41,7 @@ serde_json = "1.0"
 serde_yaml = "0.9"
 toml = "0.8"
 sha2 = "0.10"
+uuid = { version = "1.6", features = ["v4", "serde"] }
 
 # CLI
 clap = { version = "4.5", features = ["derive", "cargo", "env"] }
@@ -76,6 +79,8 @@ humantime = "2.1"
 # Error handling
 anyhow = "1.0"
 thiserror = "1.0"
+rustls-pemfile = "2.2"
+rusqlite = { version = "0.32", features = ["bundled"] }
 
 # System information
 sysinfo = "0.30"

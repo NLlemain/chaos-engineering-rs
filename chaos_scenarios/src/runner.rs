@@ -234,6 +234,15 @@ impl ScenarioRunner {
     }
 
     pub async fn run(&self, scenario: &Scenario) -> anyhow::Result<ScenarioResult> {
+        self.run_with_cancellation(scenario, CancellationToken::new())
+            .await
+    }
+
+    pub async fn run_with_cancellation(
+        &self,
+        scenario: &Scenario,
+        cancellation: CancellationToken,
+    ) -> anyhow::Result<ScenarioResult> {
         info!("Starting scenario: {}", scenario.name);
         scenario.validate().map_err(|e| anyhow::anyhow!(e))?;
 
@@ -257,9 +266,14 @@ impl ScenarioRunner {
         let mut total_attempted = 0;
         let mut total_succeeded = 0;
         let mut total_cleanup_failures = 0;
+        let mut cancelled = false;
 
         // Execute phases
         for scheduled_phase in phases {
+            if cancellation.is_cancelled() {
+                cancelled = true;
+                break;
+            }
             // Wait until phase start time
             let elapsed = start_time.elapsed();
             if let Some(delay) = scheduled_phase.delay_until_start(elapsed) {
@@ -268,7 +282,13 @@ impl ScenarioRunner {
                     delay,
                     scheduled_phase.name()
                 );
-                tokio::time::sleep(delay).await;
+                tokio::select! {
+                    _ = cancellation.cancelled() => {
+                        cancelled = true;
+                        break;
+                    }
+                    _ = tokio::time::sleep(delay) => {}
+                }
             }
 
             info!(
@@ -311,7 +331,10 @@ impl ScenarioRunner {
             let phase_elapsed = phase_start.elapsed();
             if phase_elapsed < scheduled_phase.duration() {
                 let remaining = scheduled_phase.duration() - phase_elapsed;
-                tokio::time::sleep(remaining).await;
+                tokio::select! {
+                    _ = cancellation.cancelled() => cancelled = true,
+                    _ = tokio::time::sleep(remaining) => {}
+                }
             }
 
             // Remove injections
@@ -344,6 +367,10 @@ impl ScenarioRunner {
                 injection_failures,
                 cleanup_failures,
             });
+
+            if cancelled {
+                break;
+            }
         }
 
         let total_duration = start_time.elapsed();
@@ -366,6 +393,7 @@ impl ScenarioRunner {
             cleanup_failures: total_cleanup_failures,
             slo_results,
             telemetry,
+            cancelled,
         })
     }
 
@@ -404,6 +432,8 @@ pub struct ScenarioResult {
     pub slo_results: Vec<SloResult>,
     #[serde(default)]
     pub telemetry: RunTelemetrySnapshot,
+    #[serde(default)]
+    pub cancelled: bool,
 }
 
 impl ScenarioResult {
@@ -561,6 +591,7 @@ mod tests {
             cleanup_failures: 0,
             slo_results: vec![],
             telemetry: RunTelemetrySnapshot::default(),
+            cancelled: false,
         };
 
         assert_eq!(result.success_rate(), 0.75);

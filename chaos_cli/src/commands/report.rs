@@ -523,6 +523,7 @@ mod tests {
             cleanup_failures: 0,
             slo_results: vec![],
             telemetry: chaos_scenarios::runner::RunTelemetrySnapshot::default(),
+            cancelled: false,
         }
     }
 
