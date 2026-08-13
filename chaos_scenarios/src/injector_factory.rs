@@ -6,9 +6,10 @@ use chaos_core::{
     CryptoFaultType, DatabaseFaultConfig, DatabaseFaultInjector, DatabaseFaultMode,
     DependencyProxyConfig, DependencyProxyInjector, DirectedToxic, DiskOperation, DiskSlowConfig,
     DiskSlowInjector, DnsFaultConfig, DnsFaultInjector, DnsFaultMode, DynInjector, HttpFaultConfig,
-    HttpFaultInjector, HttpFaultType, LocalDatabaseEngine, MemoryPressureConfig,
-    MemoryPressureInjector, NetworkLatencyInjector, PacketLossConfig, PacketLossInjector,
-    ProxyDirection, ProxyToxic, Target, WindowsFaultConfig, WindowsFaultInjector, WindowsFaultMode,
+    HttpFaultInjector, HttpFaultType, KubernetesFaultConfig, KubernetesFaultInjector,
+    KubernetesFaultMode, LocalDatabaseEngine, MemoryPressureConfig, MemoryPressureInjector,
+    NetworkLatencyInjector, PacketLossConfig, PacketLossInjector, ProxyDirection, ProxyToxic,
+    Target, WindowsFaultConfig, WindowsFaultInjector, WindowsFaultMode,
 };
 use serde_json::Value;
 use std::{collections::HashMap, sync::Arc, time::Duration};
@@ -103,6 +104,9 @@ pub fn build_injector(config: &InjectionConfig) -> Result<Option<DynInjector>> {
         "database_fault" => {
             build_database_fault(config).map(|injector| Some(Arc::new(injector) as DynInjector))
         }
+        "kubernetes_fault" => {
+            build_kubernetes_fault(config).map(|injector| Some(Arc::new(injector) as DynInjector))
+        }
         "windows_fault" => {
             build_windows_fault(config).map(|injector| Some(Arc::new(injector) as DynInjector))
         }
@@ -117,6 +121,53 @@ pub fn build_injector(config: &InjectionConfig) -> Result<Option<DynInjector>> {
             )
         }
     }
+}
+
+fn build_kubernetes_fault(config: &InjectionConfig) -> Result<KubernetesFaultInjector> {
+    let parameters = &config.parameters;
+    ensure_allowed(
+        parameters,
+        &[
+            "mode",
+            "blast_radius_percent",
+            "max_pods",
+            "seed",
+            "deny_ingress",
+            "deny_egress",
+        ],
+    )?;
+    if !matches!(
+        config.target.to_target().map_err(anyhow::Error::msg)?,
+        Target::Kubernetes { .. }
+    ) {
+        bail!("kubernetes_fault requires target.kubernetes");
+    }
+    let mode = match required_string(parameters, "mode")?
+        .to_ascii_lowercase()
+        .replace('-', "_")
+        .as_str()
+    {
+        "network_isolation" | "network_partition" => KubernetesFaultMode::NetworkIsolation,
+        "scale_to_zero" | "scale_zero" => KubernetesFaultMode::ScaleToZero,
+        value => bail!(
+            "Parameter 'mode' must be network_isolation or scale_to_zero; got '{}'",
+            value
+        ),
+    };
+    let fault_config = KubernetesFaultConfig {
+        mode,
+        blast_radius_percent: u8::try_from(
+            u64_value(parameters, "blast_radius_percent")?.unwrap_or(25),
+        )
+        .context("Parameter 'blast_radius_percent' is too large")?,
+        max_pods: usize::try_from(u64_value(parameters, "max_pods")?.unwrap_or(1))
+            .context("Parameter 'max_pods' is too large")?,
+        seed: u64_value(parameters, "seed")?.unwrap_or(0),
+        deny_ingress: boolean(parameters, "deny_ingress")?.unwrap_or(true),
+        deny_egress: boolean(parameters, "deny_egress")?.unwrap_or(true),
+    };
+    fault_config.validate()?;
+    Ok(KubernetesFaultInjector::new(fault_config))
 }
 
 fn build_windows_fault(config: &InjectionConfig) -> Result<WindowsFaultInjector> {
@@ -848,6 +899,29 @@ mod tests {
         for injection in scenario.phases.iter().flat_map(|phase| &phase.injections) {
             assert!(build_injector(injection).unwrap().is_some());
         }
+    }
+
+    #[test]
+    fn kubernetes_parameters_build_a_reversible_fault() {
+        let config: InjectionConfig = serde_json::from_value(serde_json::json!({
+            "type": "kubernetes_fault",
+            "target": {
+                "kubernetes": {
+                    "namespace": "trading",
+                    "kind": "deployment",
+                    "name": "market-data"
+                }
+            },
+            "mode": "network_isolation",
+            "blast_radius_percent": 20,
+            "max_pods": 2,
+            "seed": 42,
+            "deny_ingress": false,
+            "deny_egress": true
+        }))
+        .unwrap();
+
+        assert!(build_injector(&config).unwrap().is_some());
     }
 
     #[test]

@@ -147,6 +147,7 @@ Status is part of the runtime registry and is limited to **stable**, **experimen
 | `dns_fault` | stable | None |
 | `fd_exhaustion` | stable | None |
 | `http_fault` | stable | None |
+| `kubernetes_fault` | experimental | kubectl, Kubernetes API access, RBAC for pods and network policies or workload scaling |
 | `media_streaming_fault` | planned | None |
 | `memory_pressure` | stable | None |
 | `network_latency` | experimental | CAP_NET_ADMIN |

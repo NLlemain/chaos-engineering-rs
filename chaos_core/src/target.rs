@@ -1,6 +1,24 @@
 use serde::{Deserialize, Serialize};
 use std::{net::SocketAddr, path::PathBuf};
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum KubernetesWorkloadKind {
+    Pod,
+    Deployment,
+    StatefulSet,
+}
+
+impl KubernetesWorkloadKind {
+    pub fn resource(self) -> &'static str {
+        match self {
+            Self::Pod => "pod",
+            Self::Deployment => "deployment",
+            Self::StatefulSet => "statefulset",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum Target {
     /// Target a specific process by PID
@@ -21,6 +39,15 @@ pub enum Target {
 
     /// Target a local file-backed database or storage artifact
     File { path: PathBuf },
+
+    /// Target Kubernetes pods directly or through a workload selector.
+    Kubernetes {
+        context: Option<String>,
+        namespace: String,
+        kind: KubernetesWorkloadKind,
+        name: Option<String>,
+        selector: Option<String>,
+    },
 
     /// Target a specific thread
     Thread { tid: u32 },
@@ -61,6 +88,22 @@ impl Target {
         Self::File { path: path.into() }
     }
 
+    pub fn kubernetes(
+        context: Option<String>,
+        namespace: impl Into<String>,
+        kind: KubernetesWorkloadKind,
+        name: Option<String>,
+        selector: Option<String>,
+    ) -> Self {
+        Self::Kubernetes {
+            context,
+            namespace: namespace.into(),
+            kind,
+            name,
+            selector,
+        }
+    }
+
     pub fn thread(tid: u32) -> Self {
         Self::Thread { tid }
     }
@@ -94,6 +137,25 @@ impl Target {
                     .unwrap_or_default()
             ),
             Target::File { path } => format!("File {}", path.display()),
+            Target::Kubernetes {
+                context,
+                namespace,
+                kind,
+                name,
+                selector,
+            } => format!(
+                "Kubernetes {} {}/{}{}{}",
+                context.as_deref().unwrap_or("current-context"),
+                namespace,
+                kind.resource(),
+                name.as_ref()
+                    .map(|value| format!("/{value}"))
+                    .unwrap_or_default(),
+                selector
+                    .as_ref()
+                    .map(|value| format!(" selector={value}"))
+                    .unwrap_or_default()
+            ),
             Target::Thread { tid } => format!("Thread TID {}", tid),
             Target::ProcessPattern { pattern } => format!("Process pattern '{}'", pattern),
             Target::System => "System".to_string(),
@@ -145,6 +207,32 @@ impl Target {
                     .is_some_and(|output| !output.trim().is_empty())
             }
             Target::File { path } => path.is_file(),
+            Target::Kubernetes {
+                context,
+                namespace,
+                kind,
+                name,
+                selector,
+            } => {
+                let mut command = tokio::process::Command::new(
+                    std::env::var_os("CHAOS_KUBECTL_BIN").unwrap_or_else(|| "kubectl".into()),
+                );
+                if let Some(context) = context {
+                    command.args(["--context", context]);
+                }
+                command.args(["--namespace", namespace, "get", kind.resource()]);
+                if let Some(name) = name {
+                    command.arg(name);
+                }
+                if let Some(selector) = selector {
+                    command.args(["--selector", selector]);
+                }
+                command.args(["--output", "name"]);
+                command
+                    .output()
+                    .await
+                    .is_ok_and(|output| output.status.success() && !output.stdout.is_empty())
+            }
             Target::Thread { tid: _ } => {
                 #[cfg(unix)]
                 {

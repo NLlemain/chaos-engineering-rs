@@ -93,6 +93,8 @@ pub struct TargetConfig {
     #[serde(default)]
     pub file: Option<std::path::PathBuf>,
     #[serde(default)]
+    pub kubernetes: Option<KubernetesTargetConfig>,
+    #[serde(default)]
     pub pattern: Option<String>,
     #[serde(default)]
     pub process_name: Option<String>,
@@ -108,6 +110,7 @@ impl TargetConfig {
             self.container_id.is_some(),
             self.compose_service.is_some(),
             self.file.is_some(),
+            self.kubernetes.is_some(),
             self.pattern.is_some(),
             self.process_name.is_some(),
             self.system,
@@ -145,6 +148,8 @@ impl TargetConfig {
             ))
         } else if let Some(path) = &self.file {
             Ok(chaos_core::Target::file(path))
+        } else if let Some(kubernetes) = &self.kubernetes {
+            kubernetes.to_target()
         } else if let Some(pattern) = &self.pattern {
             Ok(chaos_core::Target::process_pattern(pattern.clone()))
         } else if let Some(process_name) = &self.process_name {
@@ -152,6 +157,58 @@ impl TargetConfig {
         } else {
             Ok(chaos_core::Target::system())
         }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct KubernetesTargetConfig {
+    #[serde(default)]
+    pub context: Option<String>,
+    pub namespace: String,
+    #[serde(default = "default_kubernetes_kind")]
+    pub kind: String,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub selector: Option<String>,
+}
+
+fn default_kubernetes_kind() -> String {
+    "pod".to_string()
+}
+
+impl KubernetesTargetConfig {
+    fn to_target(&self) -> Result<chaos_core::Target, String> {
+        if self.namespace.trim().is_empty() {
+            return Err("Kubernetes namespace cannot be empty".into());
+        }
+        if self.name.is_none() && self.selector.is_none() {
+            return Err("Kubernetes target requires name or selector".into());
+        }
+        let kind = match self
+            .kind
+            .trim()
+            .to_ascii_lowercase()
+            .replace('-', "")
+            .as_str()
+        {
+            "pod" | "pods" => chaos_core::KubernetesWorkloadKind::Pod,
+            "deployment" | "deployments" => chaos_core::KubernetesWorkloadKind::Deployment,
+            "statefulset" | "statefulsets" => chaos_core::KubernetesWorkloadKind::StatefulSet,
+            value => {
+                return Err(format!(
+                    "Kubernetes kind must be pod, deployment, or statefulset; got '{value}'"
+                ))
+            }
+        };
+        Ok(chaos_core::Target::kubernetes(
+            self.context.clone(),
+            self.namespace.clone(),
+            kind,
+            self.name.clone(),
+            self.selector.clone(),
+        ))
     }
 }
 
@@ -463,6 +520,33 @@ mod tests {
                 if service == "api"
                     && file == std::path::Path::new("deploy/compose.yaml")
                     && project.as_deref() == Some("demo")
+        ));
+    }
+
+    #[test]
+    fn kubernetes_target_preserves_workload_selection() {
+        let target: TargetConfig = serde_json::from_value(serde_json::json!({
+            "kubernetes": {
+                "context": "staging-eu",
+                "namespace": "trading",
+                "kind": "deployment",
+                "name": "market-data",
+                "selector": "venue=xnas"
+            }
+        }))
+        .unwrap();
+        assert!(matches!(
+            target.to_target().unwrap(),
+            chaos_core::Target::Kubernetes {
+                context,
+                namespace,
+                kind: chaos_core::KubernetesWorkloadKind::Deployment,
+                name,
+                selector,
+            } if context.as_deref() == Some("staging-eu")
+                && namespace == "trading"
+                && name.as_deref() == Some("market-data")
+                && selector.as_deref() == Some("venue=xnas")
         ));
     }
 

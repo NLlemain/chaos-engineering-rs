@@ -11,7 +11,7 @@ pub use executor::Executor;
 pub use handle::InjectionHandle;
 pub use injectors::*;
 pub use recovery::RecoveryJournal;
-pub use target::Target;
+pub use target::{KubernetesWorkloadKind, Target};
 
 // Re-export commonly used types
 pub use async_trait::async_trait;

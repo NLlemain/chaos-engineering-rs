@@ -11,6 +11,7 @@ pub mod disk_fill;
 pub mod dns;
 pub mod fd_exhaustion;
 pub mod http_fault;
+pub mod kubernetes_fault;
 pub mod media_streaming_fault;
 pub mod memory;
 pub mod network;
@@ -72,6 +73,7 @@ pub use disk_fill::*;
 pub use dns::*;
 pub use fd_exhaustion::*;
 pub use http_fault::*;
+pub use kubernetes_fault::*;
 pub use media_streaming_fault::*;
 pub use memory::*;
 pub use network::*;
@@ -200,6 +202,10 @@ impl InjectorRegistry {
             Arc::new(ContainerFaultInjector::default()),
         );
         registry.register("database_fault", Arc::new(DatabaseFaultInjector::default()));
+        registry.register(
+            "kubernetes_fault",
+            Arc::new(KubernetesFaultInjector::default()),
+        );
         registry.register(
             "dependency_proxy",
             Arc::new(DependencyProxyInjector::default()),
