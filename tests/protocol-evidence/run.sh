@@ -38,7 +38,7 @@ probe() {
         -e "SELECT 1" >/dev/null
       ;;
     kafka)
-      dct 8 exec -T kafka-client /opt/kafka/bin/kafka-topics.sh \
+      dct 5 exec -T kafka-client /opt/kafka/bin/kafka-topics.sh \
         --bootstrap-server kafka:9092 --list >/dev/null
       ;;
     rabbitmq)
@@ -54,10 +54,10 @@ probe() {
         -t chaos/evidence -m baseline >/dev/null
       ;;
     s3)
-      dct 8 exec -T minio-client /usr/bin/mc alias set local \
+      dct 5 exec -T minio-client /usr/bin/mc alias set local \
         http://minio:9000 chaosadmin chaos-password >/dev/null
-      dct 8 exec -T minio-client /bin/sh -c \
-        "mc mb --ignore-existing local/evidence >/dev/null && printf evidence | mc pipe local/evidence/probe >/dev/null && mc cat local/evidence/probe | grep -q evidence"
+      dct 5 exec -T minio-client /bin/sh -c \
+        "mc mb --ignore-existing local/evidence >/dev/null && printf evidence | mc pipe local/evidence/probe >/dev/null && test \"\$(mc cat local/evidence/probe)\" = evidence"
       ;;
   esac
 }
@@ -91,7 +91,7 @@ cargo build --locked -p chaos_cli --bin chaos
   --compose-file "$compose" \
   --compose-project "$project" \
   --action pause \
-  --duration 8s >"$root/target/protocol-evidence-${target}.log" 2>&1 &
+  --duration 15s >"$root/target/protocol-evidence-${target}.log" 2>&1 &
 fault_pid=$!
 
 for _ in $(seq 1 30); do
