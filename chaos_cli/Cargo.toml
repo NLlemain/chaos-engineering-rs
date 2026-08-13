@@ -8,8 +8,8 @@ repository.workspace = true
 homepage.workspace = true
 readme.workspace = true
 rust-version.workspace = true
-description = "Distributed chaos and HFT fault replay CLI with recovery, policy, and SLO evidence"
-keywords = ["chaos-engineering", "hft", "distributed-systems", "fault-injection", "cli"]
+description = "Chaos engineering CLI for infrastructure, APIs, distributed systems, and data pipelines"
+keywords = ["chaos-engineering", "data-pipeline", "distributed-systems", "fault-injection", "cli"]
 categories = ["command-line-utilities", "development-tools::testing"]
 
 [[bin]]

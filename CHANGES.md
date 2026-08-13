@@ -2,6 +2,19 @@
 
 All notable changes are documented here. This project follows semantic versioning.
 
+## Unreleased
+
+### Added
+
+- Capacity-zero pipeline replay that measures real producer backpressure without an intermediate queue.
+- Generic JSONL integrity evidence for record loss, duplication, reordering, truncation, timestamp regression, field corruption, partition outage, sequence reset, cardinality explosion, and hot-key collapse.
+- Searchable pipeline, CDC, WebSocket, gRPC, GraphQL, Redis/Valkey, OpenTelemetry, and crypto exchange scenario packs.
+- Catalog pack kinds with production validation for both runnable scenarios and offline pipeline fault plans.
+
+### Changed
+
+- Project discovery now represents the complete API, infrastructure, distributed, streaming, observability, AI, and trading feature set rather than one specialty.
+
 ## 0.4.0 - 2026-08-13
 
 ### Added

@@ -431,6 +431,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chaos_core",
+ "chaos_packs",
  "chrono",
  "humantime",
  "rand",

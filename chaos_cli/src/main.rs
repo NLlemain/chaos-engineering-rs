@@ -7,7 +7,7 @@ use tracing::Level;
 
 #[derive(Parser)]
 #[command(name = "chaos")]
-#[command(about = "Deterministic chaos engineering for distributed and latency-critical systems", long_about = None)]
+#[command(about = "Evidence-driven chaos engineering for applications, infrastructure, and real-time data", long_about = None)]
 #[command(version)]
 struct Cli {
     #[command(subcommand)]

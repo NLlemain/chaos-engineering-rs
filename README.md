@@ -5,9 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE-MIT)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-555)](#capability-matrix)
 
-**Deterministic failure engineering for distributed and latency-critical systems.**
+**Evidence-driven chaos engineering for applications, infrastructure, and real-time data.**
 
-Chaos Engineering RS is a Rust CLI and library for evidence-driven fault injection. It coordinates mutually authenticated remote agents, enforces blast-radius and SLO policy, applies reversible Kubernetes and rootless dependency faults, and records reproducible experiments. Its HFT lab replays market data and FIX sessions through seeded faults while checking sequence integrity, order-book state, acknowledgement latency, and exact recovery.
+Chaos Engineering RS is a cross-platform Rust CLI and library for fault injection, resilience testing, and recovery verification. Test APIs, Docker and Kubernetes workloads, databases, networks, AI streams, data pipelines, observability, media, IoT, storage, distributed systems, and trading infrastructure. Experiments are reproducible, policy bounded, measurable, and recoverable rather than a list of simulated failure names.
 
 ![Chaos dashboard](docs/assets/dashboard.png)
 
@@ -15,6 +15,7 @@ Chaos Engineering RS is a Rust CLI and library for evidence-driven fault injecti
 
 - **Distributed control:** mTLS agents use prepare/execute/recover commands, deterministic per-target seeds, coordinated phases, and policy-bounded parallelism.
 - **Market-microstructure evidence:** replay market-data gaps, duplicates, reordering, clock skew, venue partitions, and order-ack latency; mutate FIX sequence, `PossDup`, reject, and checksum behavior.
+- **Zero-buffer pipeline evidence:** rendezvous producers directly with consumers, measure real backpressure, and replay loss, truncation, event-time regressions, hot keys, schema poison, CDC boundaries, and telemetry cardinality faults.
 - **Recovery first:** every recoverable effect is journaled, Kubernetes changes retain their original state, and interrupted experiments can be stopped centrally.
 - **Honest effects:** an injector cannot report success unless it produced a measurable disruption; stable packs require CI evidence for disruption and restoration.
 - **Rootless and CI ready:** dependency, DNS, TLS, HTTP, AI, database, queue, media, storage, and trading faults can run through local proxies with SLO exit gates.
@@ -56,6 +57,22 @@ chaos serve --host 127.0.0.1 --port 8080
 ```
 
 See [QUICKSTART.md](QUICKSTART.md) for proxy, Docker, database, telemetry, report, and recovery examples.
+
+## Zero-Buffer Data Pipelines
+
+`chaos pipeline replay` tests generic JSON Lines streams with a capacity-zero rendezvous channel. Every producer send waits for a ready consumer; there is no hidden queue between stages. Reports measure producer-blocking p50/p99/max, record loss, sequence gaps, duplicates, ordering, timestamp regressions, content digests, and exact restored delivery.
+
+```bash
+chaos pipeline replay tests/pipeline-evidence/records.jsonl \
+  --fault-plan tests/pipeline-evidence/zero-buffer-stall.yaml \
+  --budget tests/pipeline-evidence/budget.yaml \
+  --output pipeline-evidence.json
+
+chaos pack list --category data-pipelines
+chaos pack list --search backpressure
+```
+
+The same record model can represent WebSocket feeds, CDC/outbox events, queue consumers, ETL/ELT stages, telemetry, crypto order books, and in-process channels. Faults include consumer stalls, end-of-stream truncation, drops, duplication, reordering, partition outages, timestamp regression, JSON Pointer corruption, commit-marker loss, sequence resets, cardinality explosion, and routing-key collapse.
 
 ## HFT And Quant Engineering
 
@@ -105,7 +122,7 @@ chaos run examples/kubernetes-network-isolation.yaml
 
 ## Rootless Faults
 
-`chaos proxy` provides directional latency, jitter, bandwidth limits, connection timeouts, slow closes, byte limits, partitions, corruption, duplication, reordering, and connection-pool pressure. `chaos dns-proxy`, `chaos tls-endpoint`, and `chaos ai-proxy` add DNS answers, TLS handshake failures, HTTP delay/status/body/header faults, delayed tokens, broken SSE streams, malformed tool calls, 429 storms, and context truncation.
+`chaos proxy` provides directional latency, jitter, bandwidth limits, connection timeouts, slow closes, byte limits, partitions, corruption, duplication, reordering, and connection-pool pressure. `chaos dns-proxy`, `chaos tls-endpoint`, and `chaos ai-proxy` add DNS answers, TLS handshake failures, HTTP delay/status/body/header faults, delayed tokens, broken SSE streams, malformed tool calls, 429 storms, and context truncation. Downloadable profiles cover WebSocket slow consumers, gRPC stream truncation, Redis/Valkey response lag, and partial GraphQL responses.
 
 ```bash
 chaos proxy --listen 127.0.0.1:15432 --upstream 127.0.0.1:5432 \
@@ -119,10 +136,13 @@ Point the application at the local listener; no kernel network rules are require
 
 ## Scenario Packs
 
-The catalog covers AI APIs, authentication, containers, databases, IoT/MQTT, media/HLS/WebRTC, object storage, queues, trading/FIX/market data, network/DNS, and Windows. Search and install only what a test needs:
+The catalog covers AI APIs, authentication, containers, data pipelines, databases, IoT/MQTT, media/HLS/WebRTC, object storage, observability/OpenTelemetry, queues, trading/FIX/crypto market data, network/DNS/gRPC/GraphQL/WebSocket, and Windows. Search and install only what a test needs:
 
 ```bash
 chaos pack list --category ai
+chaos pack list --category data-pipelines
+chaos pack list --search opentelemetry
+chaos pack list --search crypto
 chaos pack show ai-openai-compatible
 chaos pack install ai-openai-compatible --output ./scenarios
 ```
@@ -176,7 +196,7 @@ The default journal is `~/.chaos-engineering/recovery.json`. `doctor` reports mi
 
 ## Capability Matrix
 
-Status is part of the runtime registry and is limited to **stable**, **experimental**, or **planned**. `chaos list` is the source of truth for the current operating system; `chaos list --json` exposes the same 25-entry registry to scripts, including each injector's required capabilities. `chaos doctor` adds permission and dependency checks.
+Injector and pack status is limited to **stable**, **experimental**, or **planned**. `chaos list` is the source of truth for operating-system injectors, while `chaos pack list` covers downloadable protocol scenarios and offline fault plans. `chaos list --json` exposes the 25-entry runtime registry to scripts, including each injector's required capabilities. `chaos doctor` adds permission and dependency checks.
 
 <!-- BEGIN GENERATED CAPABILITY MATRIX -->
 | Injector | Status | Required capabilities |

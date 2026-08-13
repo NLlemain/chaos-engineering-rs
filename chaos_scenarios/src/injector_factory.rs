@@ -943,23 +943,15 @@ mod tests {
 
     #[test]
     fn every_downloadable_scenario_pack_parses_and_builds() {
-        fn yaml_files(directory: &std::path::Path, files: &mut Vec<std::path::PathBuf>) {
-            for entry in std::fs::read_dir(directory).unwrap() {
-                let path = entry.unwrap().path();
-                if path.is_dir() {
-                    yaml_files(&path, files);
-                } else if matches!(
-                    path.extension().and_then(|value| value.to_str()),
-                    Some("yaml" | "yml")
-                ) {
-                    files.push(path);
-                }
-            }
-        }
-
-        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../scenario-packs");
-        let mut files = Vec::new();
-        yaml_files(&root, &mut files);
+        let repository = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+        let catalog: serde_json::Value = serde_json::from_str(chaos_packs::CATALOG_JSON).unwrap();
+        let files = catalog["packs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|entry| entry["kind"].as_str().unwrap_or("scenario").eq("scenario"))
+            .map(|entry| repository.join(entry["file"].as_str().unwrap()))
+            .collect::<Vec<_>>();
         assert!(files.len() >= 30, "expected the complete scenario catalog");
 
         for file in files {

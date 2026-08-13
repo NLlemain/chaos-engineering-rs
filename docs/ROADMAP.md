@@ -41,6 +41,17 @@ The roadmap favors credibility, recovery, and protocol depth over an inflated in
 - [ ] Attribute tail latency across network, gateway, risk, matching, and strategy stages.
 - [ ] Add counterfactual replay reports for fill, slippage, exposure, and PnL divergence.
 
+## v0.6 - Streaming Systems Evidence
+
+- [x] Add capacity-zero rendezvous replay with measured producer backpressure.
+- [x] Add deterministic record loss, truncation, sequence, timestamp, field, cardinality, and partition-key faults.
+- [x] Add searchable CDC, WebSocket, gRPC, GraphQL, Redis/Valkey, OpenTelemetry, and crypto feed packs.
+- [ ] Add native Debezium transaction and schema-history fixtures.
+- [ ] Add Kafka/Pulsar/Kinesis partition-skew integrations with lag and rebalance assertions.
+- [ ] Add Flink event-time, watermark, checkpoint, and savepoint recovery fixtures.
+- [ ] Add OTLP metric temporality and trace-parent corruption assertions against a real collector.
+- [ ] Add exchange-specific Binance, Coinbase, Kraken, and OKX snapshot/delta adapters.
+
 ## Contribution Areas
 
 Good first issues focus on one pack, fixture, documentation gap, or integration assertion. Core injector proposals must explain why existing rootless primitives and scenario packs cannot express the effect.

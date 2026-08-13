@@ -90,7 +90,26 @@ chaos pack show database-postgres-disconnect
 chaos pack install database-postgres-disconnect --output ./scenarios
 ```
 
-The catalog also contains authentication, queues, MQTT, media, object storage, containers, trading, network, and Windows packs.
+The catalog also contains authentication, queues, MQTT, media, object storage, containers, data pipelines, observability, trading, network, and Windows packs.
+
+## Replay A Zero-Buffer Pipeline
+
+Every record crosses a capacity-zero channel, so a stalled consumer directly blocks the producer instead of filling a queue:
+
+```bash
+chaos pipeline replay tests/pipeline-evidence/records.jsonl \
+  --fault-plan tests/pipeline-evidence/zero-buffer-stall.yaml \
+  --budget tests/pipeline-evidence/budget.yaml \
+  --output test_results/pipeline-evidence.json
+```
+
+Find reusable plans for backpressure, stream truncation, CDC boundaries, event time, hot keys, schema poison, crypto feeds, and OpenTelemetry:
+
+```bash
+chaos pack list --category data-pipelines
+chaos pack list --search cdc
+chaos pack list --search opentelemetry
+```
 
 ## Replay Market And FIX Faults
 

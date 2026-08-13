@@ -4,11 +4,11 @@ Repository: `Ninian-Lemain/chaos-engineering-rs`
 
 ## Description
 
-Deterministic chaos engineering for distributed and latency-critical systems. mTLS agents, Kubernetes recovery, SLO gates, and HFT/FIX market-data fault replay in Rust.
+Cross-platform chaos engineering and fault injection for APIs, Kubernetes, Docker, databases, distributed systems, zero-buffer data pipelines, AI streams, observability, and trading infrastructure. Reproducible tests with SLO and recovery evidence.
 
 ## Topics
 
-`chaos-engineering`, `fault-injection`, `resilience-testing`, `distributed-systems`, `rust`, `kubernetes`, `sre`, `observability`, `high-frequency-trading`, `quantitative-finance`, `algorithmic-trading`, `market-data`, `fix-protocol`, `fintech`, `mtls`, `docker`, `opentelemetry`, `prometheus`, `ai-testing`, `github-actions`
+`chaos-engineering`, `fault-injection`, `resilience-testing`, `reliability-engineering`, `distributed-systems`, `rust`, `kubernetes`, `docker`, `sre`, `data-pipeline`, `stream-processing`, `backpressure`, `observability`, `opentelemetry`, `api-testing`, `ai-testing`, `high-frequency-trading`, `crypto-trading`, `market-data`, `fix-protocol`
 
 ## Community
 

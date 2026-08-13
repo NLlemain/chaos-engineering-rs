@@ -41,10 +41,10 @@ Planned injectors may reserve configuration and documentation, but must not retu
 
 ## Scenario Packs
 
-Prefer a pack when behavior can be expressed using HTTP, DNS, TLS, TCP, database, container, or Windows primitives. A pack contribution includes:
+Prefer a pack when behavior can be expressed using HTTP, DNS, TLS, TCP, database, container, Windows, or offline pipeline replay primitives. A pack contribution includes:
 
 - One or more validated scenario files.
-- A catalog entry with category, status, protocols, requirements, and source path.
+- A catalog entry with kind, category, status, protocols, requirements, and source path.
 - A short category README update.
 - A deterministic local test target or a documented opt-in integration test.
 
