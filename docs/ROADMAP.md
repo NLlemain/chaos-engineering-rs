@@ -17,13 +17,13 @@ The roadmap favors credibility, recovery, and protocol depth over an inflated in
 
 ## v0.3 - Protocol Evidence
 
-- [ ] Add opt-in integration suites with real PostgreSQL, MySQL, Kafka, RabbitMQ, NATS, MQTT, and S3-compatible targets.
-- [ ] Promote stable scenario packs only after disruption and restoration assertions pass in CI.
-- [ ] Add packet-level media fixtures for HLS segment loss and WebRTC keyframe-loss validation.
-- [ ] Add OAuth/JWKS fixtures with certificate rotation and controllable clock sources.
-- [ ] Add signed, versioned pack indexes with compatibility constraints.
+- [x] Add opt-in integration suites with real PostgreSQL, MySQL, Kafka, RabbitMQ, NATS, MQTT, and S3-compatible targets.
+- [x] Promote stable scenario packs only after disruption and restoration assertions pass in CI.
+- [x] Add packet-level media fixtures for HLS segment loss and WebRTC keyframe-loss validation.
+- [x] Add OAuth/JWKS fixtures with certificate rotation and controllable clock sources.
+- [x] Add signed, versioned pack indexes with compatibility constraints.
 - [x] Add machine-readable `list --json` and `doctor --json` output.
-- [ ] Generate the checked-in capability matrix from the runtime registry during releases.
+- [x] Generate the checked-in capability matrix from the runtime registry during releases.
 
 ## v0.4 - Distributed Experiments
 

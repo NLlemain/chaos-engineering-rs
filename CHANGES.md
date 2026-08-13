@@ -2,6 +2,22 @@
 
 All notable changes are documented here. This project follows semantic versioning.
 
+## 0.3.0 - 2026-08-13
+
+### Added
+
+- Opt-in CI suites that prove baseline health, disruption, and restoration against real PostgreSQL, MySQL, Kafka, RabbitMQ, NATS, MQTT, and S3-compatible services.
+- Packet-level HLS and RTP fixtures for exact segment restoration and VP8/H.264 keyframe-loss assertions.
+- OAuth/JWKS fixtures with real certificate rotation, overlap windows, and controllable token clocks.
+- Versioned scenario-pack index metadata with CLI and scenario-schema compatibility constraints.
+- Machine-readable `chaos list --json` and `chaos doctor --json` output.
+- Runtime-generated README capability matrix with CI and release drift checks.
+
+### Changed
+
+- Stable scenario packs must map to CI evidence that asserts both disruption and restoration.
+- Releases publish SHA-256 files and GitHub attestations for versioned pack archives and indexes.
+
 ## 0.2.1 - 2026-08-02
 
 ### Fixed
