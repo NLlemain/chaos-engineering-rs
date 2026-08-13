@@ -292,6 +292,7 @@ dependencies = [
  "chaos_hft",
  "chaos_metrics",
  "chaos_packs",
+ "chaos_pipeline",
  "chaos_scenarios",
  "chaos_web",
  "chrono",

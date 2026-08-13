@@ -1,0 +1,7 @@
+seed: 4242
+faults:
+  - type: consumer_stall
+    every: 3
+    offset: 1
+    delay_ms: 25
+

@@ -1,0 +1,7 @@
+{"sequence":1,"partition":"orders","key":"BTC-EUR-1","timestamp_ns":1000000,"data":{"kind":"snapshot","exchange":"sandbox","symbol":"BTC-EUR","price_ticks":6500000,"quantity":4}}
+{"sequence":2,"partition":"orders","key":"BTC-EUR-2","timestamp_ns":2000000,"data":{"kind":"delta","exchange":"sandbox","symbol":"BTC-EUR","price_ticks":6500100,"quantity":2}}
+{"sequence":3,"partition":"orders","key":"BTC-EUR-3","timestamp_ns":3000000,"data":{"kind":"trade","exchange":"sandbox","symbol":"BTC-EUR","price_ticks":6500050,"quantity":1}}
+{"sequence":4,"partition":"orders","key":"BTC-EUR-4","timestamp_ns":4000000,"data":{"kind":"delta","exchange":"sandbox","symbol":"BTC-EUR","price_ticks":6500200,"quantity":3}}
+{"sequence":5,"partition":"orders","key":"BTC-EUR-5","timestamp_ns":5000000,"data":{"kind":"heartbeat","exchange":"sandbox","symbol":"BTC-EUR"}}
+{"sequence":6,"partition":"orders","key":"BTC-EUR-6","timestamp_ns":6000000,"data":{"kind":"delta","exchange":"sandbox","symbol":"BTC-EUR","price_ticks":6500300,"quantity":5}}
+

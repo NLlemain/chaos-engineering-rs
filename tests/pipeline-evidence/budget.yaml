@@ -1,0 +1,7 @@
+max_sequence_gaps: 0
+max_duplicates: 0
+max_out_of_order: 0
+max_timestamp_regressions: 0
+max_records_lost: 0
+max_p99_producer_block_ns: 100000000
+

@@ -1,0 +1,14 @@
+seed: 2026
+faults:
+  - type: drop_every
+    every: 4
+    offset: 1
+  - type: reorder_adjacent
+    every: 4
+    offset: 0
+  - type: corrupt_field
+    every: 5
+    offset: 0
+    pointer: /quantity
+    replacement: 999999
+

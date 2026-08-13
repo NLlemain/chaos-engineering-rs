@@ -183,6 +183,9 @@ enum Commands {
     /// Replay market-data and FIX faults with deterministic evidence
     Hft(commands::hft::HftArgs),
 
+    /// Replay zero-buffer data pipelines with backpressure and integrity evidence
+    Pipeline(commands::pipeline::PipelineArgs),
+
     /// Run a mutually authenticated remote experiment agent
     Agent(commands::agent::AgentArgs),
 
@@ -303,6 +306,9 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::Hft(args) => {
             commands::hft::execute(args).await?;
+        }
+        Commands::Pipeline(args) => {
+            commands::pipeline::execute(args).await?;
         }
         Commands::Agent(args) => {
             commands::agent::execute(args).await?;

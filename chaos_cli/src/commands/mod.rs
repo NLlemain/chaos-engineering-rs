@@ -11,6 +11,7 @@ pub mod hft;
 pub mod history;
 pub mod list;
 pub mod pack;
+pub mod pipeline;
 pub mod proxy;
 pub mod recover;
 pub mod report;
