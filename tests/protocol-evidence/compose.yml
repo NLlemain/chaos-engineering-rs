@@ -15,8 +15,7 @@ services:
   postgres-client:
     image: postgres:16-alpine
     profiles: [postgres]
-    entrypoint: [/bin/sh, -c]
-    command: sleep 3600
+    entrypoint: [/bin/sh, -c, "while true; do sleep 3600; done"]
     environment:
       PGPASSWORD: chaos
     depends_on:
@@ -40,8 +39,7 @@ services:
   mysql-client:
     image: mysql:8.4
     profiles: [mysql]
-    entrypoint: [/bin/sh, -c]
-    command: sleep 3600
+    entrypoint: [/bin/sh, -c, "while true; do sleep 3600; done"]
     depends_on:
       mysql:
         condition: service_healthy
@@ -70,8 +68,7 @@ services:
   kafka-client:
     image: apache/kafka:3.9.1
     profiles: [kafka]
-    entrypoint: [/bin/sh, -c]
-    command: sleep 3600
+    entrypoint: [/bin/sh, -c, "while true; do sleep 3600; done"]
     depends_on:
       kafka:
         condition: service_healthy
@@ -103,8 +100,7 @@ services:
   nats-client:
     image: natsio/nats-box:0.17.0
     profiles: [nats]
-    entrypoint: [/bin/sh, -c]
-    command: sleep 3600
+    entrypoint: [/bin/sh, -c, "while true; do sleep 3600; done"]
     depends_on: [nats]
 
   mqtt:
@@ -117,8 +113,7 @@ services:
   mqtt-client:
     image: eclipse-mosquitto:2
     profiles: [mqtt]
-    entrypoint: [/bin/sh, -c]
-    command: sleep 3600
+    entrypoint: [/bin/sh, -c, "while true; do sleep 3600; done"]
     depends_on: [mqtt]
 
   minio:
@@ -137,8 +132,7 @@ services:
   minio-client:
     image: minio/mc:RELEASE.2025-04-16T18-13-26Z
     profiles: [s3]
-    entrypoint: [/bin/sh, -c]
-    command: sleep 3600
+    entrypoint: [/bin/sh, -c, "while true; do sleep 3600; done"]
     depends_on:
       minio:
         condition: service_healthy
