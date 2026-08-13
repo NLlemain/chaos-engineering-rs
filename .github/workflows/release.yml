@@ -9,6 +9,16 @@ permissions:
   contents: read
 
 jobs:
+  capability-matrix:
+    name: Verify generated capability matrix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal
+      - name: Check runtime registry documentation
+        run: python scripts/generate_capability_matrix.py --check
+
   binaries:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.runner }}
@@ -77,7 +87,7 @@ jobs:
 
   release:
     name: Publish GitHub release
-    needs: binaries
+    needs: [binaries, capability-matrix]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -95,9 +105,12 @@ jobs:
         run: |
           set -euo pipefail
           archive="chaos-scenario-packs-${GITHUB_REF_NAME}.tar.gz"
+          index="chaos-scenario-index-${GITHUB_REF_NAME}.json"
           tar --exclude='scenario-packs/src' --exclude='scenario-packs/Cargo.toml' \
             -czf "dist/${archive}" scenario-packs
           sha256sum "dist/${archive}" > "dist/${archive}.sha256"
+          cp scenario-packs/catalog.json "dist/${index}"
+          sha256sum "dist/${index}" > "dist/${index}.sha256"
       - name: Render package-manager manifests
         shell: bash
         run: |
@@ -126,6 +139,10 @@ jobs:
         uses: actions/attest@v4
         with:
           subject-path: dist/chaos-scenario-packs-*
+      - name: Sign scenario-index provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: dist/chaos-scenario-index-*
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}

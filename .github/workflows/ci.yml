@@ -24,6 +24,8 @@ jobs:
         run: cargo +stable fmt --all -- --check
       - name: Run Clippy
         run: cargo +stable clippy --locked --workspace --all-targets -- -D warnings
+      - name: Verify generated capability matrix
+        run: python scripts/generate_capability_matrix.py --check
 
   test:
     name: Test (${{ matrix.os }})

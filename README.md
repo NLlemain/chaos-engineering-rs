@@ -130,32 +130,34 @@ The default journal is `~/.chaos-engineering/recovery.json`. `doctor` reports mi
 
 Status is part of the runtime registry and is limited to **stable**, **experimental**, or **planned**. `chaos list` is the source of truth for the current operating system; `chaos list --json` exposes the same 24-entry registry to scripts, including each injector's required capabilities. `chaos doctor` adds permission and dependency checks.
 
-| Injector | Status | Real effect / requirement |
+<!-- BEGIN GENERATED CAPABILITY MATRIX -->
+| Injector | Status | Required capabilities |
 |---|---|---|
-| `aws_fault` | planned | No successful injection is exposed yet |
-| `azure_fault` | planned | No successful injection is exposed yet |
-| `clock_skew` | planned | Reserved for a recoverable clock implementation |
-| `cloudflare_fault` | planned | No successful injection is exposed yet |
-| `container_fault` | stable | Docker/Compose pause, stop, kill, restart; Docker daemon required |
-| `cpu_starvation` | stable | Measured worker load; zero intensity is rejected |
-| `crypto_fault` | stable/planned | TLS endpoint faults are stable; unsupported modes stay planned |
-| `database_fault` | stable/experimental | DuckDB/SQLite unavailable/read-only stable; pressure modes experimental |
-| `dependency_proxy` | stable | Rootless directional TCP faults and connection limits |
-| `disk_fill` | stable | Real allocated bytes with journaled cleanup |
-| `disk_slow` | planned | No simulated success |
-| `dns_fault` | stable | Rootless DNS delay, failure, spoof, and stale-answer modes |
-| `fd_exhaustion` | stable | Real handles opened and closed during recovery |
-| `http_fault` | stable | HTTP/AI delay, status, truncation, malformed headers, stream faults |
-| `media_streaming_fault` | planned | Available through scenario packs and proxy primitives |
-| `memory_pressure` | stable | Real retained allocation; zero-effect runs are rejected |
-| `network_latency` | experimental/planned | Linux/Windows experimental with elevation; macOS planned |
-| `nginx_fault` | planned | No simulated success |
-| `packet_loss` | experimental/planned | Linux `tc` experimental; other platforms planned |
-| `process_freeze` | stable/planned | Unix signals stable; Windows planned |
-| `process_kill` | experimental | Real process termination with rights validation |
-| `socket_corrupt` | planned | Available through the rootless proxy, not this raw injector |
-| `tcp_reset` | experimental/planned | Linux `iptables` experimental; other platforms planned |
-| `windows_fault` | experimental/planned | Windows services/files/handles/pipes experimental; elsewhere planned |
+| `aws_fault` | planned | None |
+| `azure_fault` | planned | None |
+| `clock_skew` | planned | CAP_SYS_TIME |
+| `cloudflare_fault` | planned | None |
+| `container_fault` | stable | Docker CLI and daemon access |
+| `cpu_starvation` | stable | None |
+| `crypto_fault` | stable | None |
+| `database_fault` | stable | Read/write access to the database directory |
+| `dependency_proxy` | stable | None |
+| `disk_fill` | stable | Write access to the target directory |
+| `disk_slow` | planned | None |
+| `dns_fault` | stable | None |
+| `fd_exhaustion` | stable | None |
+| `http_fault` | stable | None |
+| `media_streaming_fault` | planned | None |
+| `memory_pressure` | stable | None |
+| `network_latency` | experimental | CAP_NET_ADMIN |
+| `nginx_fault` | planned | None |
+| `packet_loss` | planned | CAP_NET_ADMIN |
+| `process_freeze` | planned | None |
+| `process_kill` | experimental | Process termination rights |
+| `socket_corrupt` | planned | CAP_NET_RAW, CAP_NET_ADMIN |
+| `tcp_reset` | planned | CAP_NET_ADMIN |
+| `windows_fault` | experimental | None |
+<!-- END GENERATED CAPABILITY MATRIX -->
 
 Integration tests verify that stable effects disrupt their target and restore recoverable state. Planned injectors fail closed instead of pretending to run.
 
