@@ -264,6 +264,14 @@ impl Injector for WindowsFaultInjector {
         }
     }
 
+    fn status_for(&self, platform: crate::injectors::InjectorPlatform) -> InjectorStatus {
+        match platform {
+            crate::injectors::InjectorPlatform::Windows => InjectorStatus::Experimental,
+            crate::injectors::InjectorPlatform::Linux
+            | crate::injectors::InjectorPlatform::Macos => InjectorStatus::Planned,
+        }
+    }
+
     async fn validate(&self) -> Result<()> {
         self.config.validate()?;
         #[cfg(windows)]

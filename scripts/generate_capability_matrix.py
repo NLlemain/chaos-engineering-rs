@@ -25,6 +25,8 @@ def load_registry(repository: pathlib.Path) -> list[dict[str, object]]:
             "--",
             "list",
             "--json",
+            "--platform",
+            "linux",
         ],
         cwd=repository,
         check=True,

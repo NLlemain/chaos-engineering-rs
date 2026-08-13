@@ -11,6 +11,7 @@ All notable changes are documented here. This project follows semantic versionin
 - OAuth/JWKS fixtures with real certificate rotation, overlap windows, and controllable token clocks.
 - Versioned scenario-pack index metadata with CLI and scenario-schema compatibility constraints.
 - Machine-readable `chaos list --json` and `chaos doctor --json` output.
+- Deterministic `chaos list --json --platform <os>` views for release metadata generation.
 - Runtime-generated README capability matrix with CI and release drift checks.
 
 ### Changed

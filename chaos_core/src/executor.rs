@@ -1,7 +1,7 @@
 use crate::{
     error::Result,
     handle::{InjectionHandle, InjectionState},
-    injectors::{DynInjector, InjectorInfo, InjectorRegistry, InjectorStatus},
+    injectors::{DynInjector, InjectorInfo, InjectorPlatform, InjectorRegistry, InjectorStatus},
     recovery::RecoveryJournal,
     target::Target,
 };
@@ -169,6 +169,10 @@ impl Executor {
 
     pub fn list_injector_info(&self) -> Vec<InjectorInfo> {
         self.registry.list_info()
+    }
+
+    pub fn list_injector_info_for(&self, platform: InjectorPlatform) -> Vec<InjectorInfo> {
+        self.registry.list_info_for(platform)
     }
 }
 

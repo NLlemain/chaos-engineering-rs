@@ -106,6 +106,17 @@ impl Injector for ProcessFreezeInjector {
         }
     }
 
+    fn status_for(
+        &self,
+        platform: crate::injectors::InjectorPlatform,
+    ) -> crate::injectors::InjectorStatus {
+        use crate::injectors::{InjectorPlatform, InjectorStatus};
+        match platform {
+            InjectorPlatform::Linux | InjectorPlatform::Macos => InjectorStatus::Stable,
+            InjectorPlatform::Windows => InjectorStatus::Planned,
+        }
+    }
+
     async fn validate(&self) -> Result<()> {
         if self.config.pid == Some(0) {
             return Err(ChaosError::InvalidConfig(

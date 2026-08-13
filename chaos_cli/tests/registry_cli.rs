@@ -37,3 +37,23 @@ fn list_table_remains_the_default() {
         .stdout(predicates::str::contains("=== Available Injectors ==="))
         .stdout(predicates::str::contains("Total injectors: 24"));
 }
+
+#[test]
+fn list_json_can_target_a_release_platform() {
+    let output = Command::cargo_bin("chaos")
+        .unwrap()
+        .args(["list", "--json", "--platform", "linux"])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let injectors: Vec<serde_json::Value> = serde_json::from_slice(&output.stdout).unwrap();
+    let status = |name: &str| {
+        injectors
+            .iter()
+            .find(|injector| injector["name"] == name)
+            .and_then(|injector| injector["status"].as_str())
+    };
+    assert_eq!(status("packet_loss"), Some("experimental"));
+    assert_eq!(status("process_freeze"), Some("stable"));
+    assert_eq!(status("windows_fault"), Some("planned"));
+}

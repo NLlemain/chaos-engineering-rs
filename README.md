@@ -151,12 +151,12 @@ Status is part of the runtime registry and is limited to **stable**, **experimen
 | `memory_pressure` | stable | None |
 | `network_latency` | experimental | CAP_NET_ADMIN |
 | `nginx_fault` | planned | None |
-| `packet_loss` | planned | CAP_NET_ADMIN |
-| `process_freeze` | planned | None |
+| `packet_loss` | experimental | CAP_NET_ADMIN |
+| `process_freeze` | stable | None |
 | `process_kill` | experimental | Process termination rights |
 | `socket_corrupt` | planned | CAP_NET_RAW, CAP_NET_ADMIN |
-| `tcp_reset` | planned | CAP_NET_ADMIN |
-| `windows_fault` | experimental | None |
+| `tcp_reset` | experimental | CAP_NET_ADMIN |
+| `windows_fault` | planned | None |
 <!-- END GENERATED CAPABILITY MATRIX -->
 
 Integration tests verify that stable effects disrupt their target and restore recoverable state. Planned injectors fail closed instead of pretending to run.

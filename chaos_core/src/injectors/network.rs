@@ -398,6 +398,17 @@ impl Injector for NetworkLatencyInjector {
         }
     }
 
+    fn status_for(
+        &self,
+        platform: crate::injectors::InjectorPlatform,
+    ) -> crate::injectors::InjectorStatus {
+        use crate::injectors::{InjectorPlatform, InjectorStatus};
+        match platform {
+            InjectorPlatform::Linux | InjectorPlatform::Windows => InjectorStatus::Experimental,
+            InjectorPlatform::Macos => InjectorStatus::Planned,
+        }
+    }
+
     async fn validate(&self) -> Result<()> {
         #[cfg(target_os = "linux")]
         crate::environment::require_command("tc")?;
@@ -698,6 +709,17 @@ impl Injector for PacketLossInjector {
         }
     }
 
+    fn status_for(
+        &self,
+        platform: crate::injectors::InjectorPlatform,
+    ) -> crate::injectors::InjectorStatus {
+        use crate::injectors::{InjectorPlatform, InjectorStatus};
+        match platform {
+            InjectorPlatform::Linux => InjectorStatus::Experimental,
+            InjectorPlatform::Windows | InjectorPlatform::Macos => InjectorStatus::Planned,
+        }
+    }
+
     async fn validate(&self) -> Result<()> {
         #[cfg(target_os = "linux")]
         {
@@ -912,6 +934,17 @@ impl Injector for TcpResetInjector {
         #[cfg(not(target_os = "linux"))]
         {
             crate::injectors::InjectorStatus::Planned
+        }
+    }
+
+    fn status_for(
+        &self,
+        platform: crate::injectors::InjectorPlatform,
+    ) -> crate::injectors::InjectorStatus {
+        use crate::injectors::{InjectorPlatform, InjectorStatus};
+        match platform {
+            InjectorPlatform::Linux => InjectorStatus::Experimental,
+            InjectorPlatform::Windows | InjectorPlatform::Macos => InjectorStatus::Planned,
         }
     }
 

@@ -34,6 +34,14 @@ pub enum InjectorStatus {
     Planned,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum InjectorPlatform {
+    Linux,
+    Windows,
+    Macos,
+}
+
 impl std::fmt::Display for InjectorStatus {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter.write_str(match self {
@@ -91,6 +99,11 @@ pub trait Injector: Send + Sync {
         InjectorStatus::Stable
     }
 
+    /// Report status for a target operating system when generating portable metadata.
+    fn status_for(&self, _platform: InjectorPlatform) -> InjectorStatus {
+        self.status()
+    }
+
     /// Validate the injector can run on this system
     async fn validate(&self) -> Result<()> {
         Ok(())
@@ -129,12 +142,20 @@ impl InjectorRegistry {
     }
 
     pub fn list_info(&self) -> Vec<InjectorInfo> {
+        self.collect_info(|injector| injector.status())
+    }
+
+    pub fn list_info_for(&self, platform: InjectorPlatform) -> Vec<InjectorInfo> {
+        self.collect_info(|injector| injector.status_for(platform))
+    }
+
+    fn collect_info(&self, status: impl Fn(&DynInjector) -> InjectorStatus) -> Vec<InjectorInfo> {
         let mut injectors: Vec<_> = self
             .injectors
             .values()
             .map(|injector| InjectorInfo {
                 name: injector.name().to_string(),
-                status: injector.status(),
+                status: status(injector),
                 required_capabilities: injector.required_capabilities(),
             })
             .collect();

@@ -125,6 +125,10 @@ enum Commands {
         /// Emit the runtime injector registry as JSON
         #[arg(long)]
         json: bool,
+
+        /// Generate metadata for a target operating system
+        #[arg(long, value_enum, requires = "json")]
+        platform: Option<commands::list::PlatformArg>,
     },
 
     /// Search and download protocol-specific scenario packs
@@ -249,8 +253,8 @@ async fn main() -> anyhow::Result<()> {
             commands::validate::execute(scenario_file).await?;
         }
 
-        Commands::List { json } => {
-            commands::list::execute(json).await?;
+        Commands::List { json, platform } => {
+            commands::list::execute(json, platform).await?;
         }
         Commands::Pack(args) => {
             commands::pack::execute(args).await?;

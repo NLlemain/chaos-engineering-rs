@@ -1,10 +1,31 @@
 use anyhow::Result;
-use chaos_core::{Executor, InjectorStatus};
+use chaos_core::{Executor, InjectorPlatform, InjectorStatus};
+use clap::ValueEnum;
 use colored::Colorize;
 
-pub async fn execute(json: bool) -> Result<()> {
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum PlatformArg {
+    Linux,
+    Windows,
+    Macos,
+}
+
+impl From<PlatformArg> for InjectorPlatform {
+    fn from(value: PlatformArg) -> Self {
+        match value {
+            PlatformArg::Linux => Self::Linux,
+            PlatformArg::Windows => Self::Windows,
+            PlatformArg::Macos => Self::Macos,
+        }
+    }
+}
+
+pub async fn execute(json: bool, platform: Option<PlatformArg>) -> Result<()> {
     let executor = Executor::with_defaults();
-    let injectors = executor.list_injector_info();
+    let injectors = platform.map_or_else(
+        || executor.list_injector_info(),
+        |platform| executor.list_injector_info_for(platform.into()),
+    );
 
     if json {
         println!("{}", serde_json::to_string_pretty(&injectors)?);
