@@ -2,6 +2,7 @@
 members = [
     "chaos_control",
     "chaos_hft",
+    "chaos_pipeline",
     "chaos_core",
     "chaos_scenarios",
     "chaos_metrics",

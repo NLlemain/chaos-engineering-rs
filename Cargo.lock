@@ -413,6 +413,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "chaos_pipeline"
+version = "0.4.0"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "chaos_scenarios"
 version = "0.4.0"
 dependencies = [

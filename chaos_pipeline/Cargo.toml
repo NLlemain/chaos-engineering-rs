@@ -1,0 +1,20 @@
+[package]
+name = "chaos_pipeline"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+description = "Deterministic zero-buffer data-pipeline fault replay with backpressure evidence"
+keywords = ["data-pipeline", "backpressure", "streaming", "fault-injection", "testing"]
+categories = ["development-tools::testing", "simulation"]
+
+[dependencies]
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+
