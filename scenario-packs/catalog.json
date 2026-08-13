@@ -5,6 +5,117 @@
     "cli": ">=0.2.1, <0.4.0",
     "scenario_schema": 1
   },
+  "evidence_suites": [
+    {
+      "id": "core-http-faults",
+      "workflow": ".github/workflows/ci.yml",
+      "command": "cargo test --locked -p chaos_core injectors::http_fault",
+      "assertions": ["disruption", "restoration"],
+      "packs": [
+        "ai-openai-compatible",
+        "ai-anthropic",
+        "ai-gemini",
+        "ai-openrouter",
+        "ai-ollama",
+        "auth-jwks-outage",
+        "auth-oauth-refresh-failure",
+        "hls-missing-segments",
+        "hls-stale-manifest",
+        "media-bitrate-oscillation",
+        "webrtc-signaling-delay"
+      ]
+    },
+    {
+      "id": "core-tls-faults",
+      "workflow": ".github/workflows/ci.yml",
+      "command": "cargo test --locked -p chaos_core injectors::crypto_fault",
+      "assertions": ["disruption", "restoration"],
+      "packs": ["auth-expired-certificate", "auth-incomplete-chain"]
+    },
+    {
+      "id": "docker-container-faults",
+      "workflow": ".github/workflows/ci.yml",
+      "command": "CHAOS_DOCKER_INTEGRATION=1 cargo test --locked -p chaos_core --test docker_integration",
+      "assertions": ["disruption", "restoration"],
+      "packs": ["container-compose-pause"]
+    },
+    {
+      "id": "local-database-faults",
+      "workflow": ".github/workflows/ci.yml",
+      "command": "cargo test --locked -p chaos_core injectors::database_fault",
+      "assertions": ["disruption", "restoration"],
+      "packs": [
+        "database-duckdb-unavailable",
+        "database-duckdb-io-pressure",
+        "database-sqlite-read-only"
+      ]
+    },
+    {
+      "id": "rootless-dns-faults",
+      "workflow": ".github/workflows/ci.yml",
+      "command": "cargo test --locked -p chaos_core injectors::dns",
+      "assertions": ["disruption", "restoration"],
+      "packs": ["network-dns-spoof"]
+    },
+    {
+      "id": "protocol-postgres",
+      "workflow": ".github/workflows/protocol-evidence.yml",
+      "command": "tests/protocol-evidence/run.sh postgres",
+      "assertions": ["disruption", "restoration"],
+      "packs": ["database-postgres-disconnect"]
+    },
+    {
+      "id": "protocol-mysql",
+      "workflow": ".github/workflows/protocol-evidence.yml",
+      "command": "tests/protocol-evidence/run.sh mysql",
+      "assertions": ["disruption", "restoration"],
+      "packs": ["database-mysql-slow-queries", "database-pool-exhaustion"]
+    },
+    {
+      "id": "protocol-kafka",
+      "workflow": ".github/workflows/protocol-evidence.yml",
+      "command": "tests/protocol-evidence/run.sh kafka",
+      "assertions": ["disruption", "restoration"],
+      "packs": ["kafka-rebalance"]
+    },
+    {
+      "id": "protocol-rabbitmq",
+      "workflow": ".github/workflows/protocol-evidence.yml",
+      "command": "tests/protocol-evidence/run.sh rabbitmq",
+      "assertions": ["disruption", "restoration"],
+      "packs": ["rabbitmq-ack-loss"]
+    },
+    {
+      "id": "protocol-nats",
+      "workflow": ".github/workflows/protocol-evidence.yml",
+      "command": "tests/protocol-evidence/run.sh nats",
+      "assertions": ["disruption", "restoration"],
+      "packs": ["nats-disconnect", "nats-duplicate-delivery"]
+    },
+    {
+      "id": "protocol-mqtt",
+      "workflow": ".github/workflows/protocol-evidence.yml",
+      "command": "tests/protocol-evidence/run.sh mqtt",
+      "assertions": ["disruption", "restoration"],
+      "packs": [
+        "mqtt-packet-loss",
+        "mqtt-retained-corruption",
+        "mqtt-intermittent-connectivity"
+      ]
+    },
+    {
+      "id": "protocol-s3",
+      "workflow": ".github/workflows/protocol-evidence.yml",
+      "command": "tests/protocol-evidence/run.sh s3",
+      "assertions": ["disruption", "restoration"],
+      "packs": [
+        "object-partial-upload",
+        "object-stale-read",
+        "object-throttling",
+        "object-corrupt-download"
+      ]
+    }
+  ],
   "packs": [
     {
       "id": "ai-openai-compatible",

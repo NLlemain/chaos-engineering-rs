@@ -1,0 +1,52 @@
+name: Protocol Evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Real protocol target to verify
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - postgres
+          - mysql
+          - kafka
+          - rabbitmq
+          - nats
+          - mqtt
+          - s3
+  workflow_call:
+    inputs:
+      target:
+        description: Real protocol target to verify
+        required: false
+        default: all
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  evidence:
+    name: ${{ matrix.target }} disruption and restoration
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(inputs.target == 'all' && '["postgres","mysql","kafka","rabbitmq","nats","mqtt","s3"]' || format('["{0}"]', inputs.target)) }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal
+      - name: Run protocol evidence
+        run: tests/protocol-evidence/run.sh "${{ matrix.target }}"
+      - name: Upload injector log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: protocol-evidence-${{ matrix.target }}
+          path: target/protocol-evidence-${{ matrix.target }}.log
+          if-no-files-found: ignore

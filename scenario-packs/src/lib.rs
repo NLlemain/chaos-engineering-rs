@@ -77,6 +77,7 @@ where
         .context("catalog field 'packs': expected an array")?;
     let repository_root = repository_root.as_ref();
     let mut ids = HashSet::new();
+    let mut stable_ids = HashSet::new();
 
     for (index, value) in packs.iter().enumerate() {
         let pack = value
@@ -114,6 +115,9 @@ where
                 pack_name,
                 status
             );
+        }
+        if status == "stable" {
+            stable_ids.insert(id);
         }
 
         let source = required_string(pack, pack_name, "file")?;
@@ -162,6 +166,94 @@ where
         }
     }
 
+    validate_evidence_suites(&root, repository_root, &ids, &stable_ids)
+}
+
+fn validate_evidence_suites<'a>(
+    root: &'a Value,
+    repository_root: &Path,
+    pack_ids: &HashSet<&'a str>,
+    stable_ids: &HashSet<&'a str>,
+) -> Result<()> {
+    let suites = root
+        .get("evidence_suites")
+        .and_then(Value::as_array)
+        .context("catalog field 'evidence_suites': expected an array")?;
+    let mut suite_ids = HashSet::new();
+    let mut evidenced_stable = HashSet::new();
+
+    for (index, value) in suites.iter().enumerate() {
+        let suite = value.as_object().with_context(|| {
+            format!(
+                "evidence suite #{} field '<entry>': expected an object",
+                index + 1
+            )
+        })?;
+        let fallback = format!("#{}", index + 1);
+        let suite_name = suite
+            .get("id")
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or(&fallback);
+        let id = required_string(suite, suite_name, "id")?;
+        if !suite_ids.insert(id) {
+            bail!("evidence suite '{}' field 'id': duplicate suite ID", id);
+        }
+
+        let workflow = required_string(suite, suite_name, "workflow")?;
+        let workflow_path = Path::new(workflow);
+        if workflow_path.is_absolute()
+            || workflow_path
+                .components()
+                .any(|component| matches!(component, std::path::Component::ParentDir))
+            || !workflow.starts_with(".github/workflows/")
+            || !workflow.ends_with(".yml")
+            || !repository_root.join(workflow_path).is_file()
+        {
+            bail!(
+                "evidence suite '{}' field 'workflow': '{}' is not a checked-in workflow",
+                id,
+                workflow
+            );
+        }
+        required_string(suite, suite_name, "command")?;
+
+        let assertions = required_string_values(suite, suite_name, "assertions")?;
+        for required in ["disruption", "restoration"] {
+            if !assertions.contains(required) {
+                bail!(
+                    "evidence suite '{}' field 'assertions': missing '{}' assertion",
+                    id,
+                    required
+                );
+            }
+        }
+
+        for pack_id in required_string_values(suite, suite_name, "packs")? {
+            if !pack_ids.contains(pack_id) {
+                bail!(
+                    "evidence suite '{}' field 'packs': unknown pack '{}'",
+                    id,
+                    pack_id
+                );
+            }
+            if stable_ids.contains(pack_id) && !evidenced_stable.insert(pack_id) {
+                bail!(
+                    "stable pack '{}' is covered by more than one evidence suite",
+                    pack_id
+                );
+            }
+        }
+    }
+
+    let mut missing: Vec<_> = stable_ids.difference(&evidenced_stable).copied().collect();
+    missing.sort_unstable();
+    if !missing.is_empty() {
+        bail!(
+            "stable packs require CI disruption and restoration evidence: {}",
+            missing.join(", ")
+        );
+    }
     Ok(())
 }
 
@@ -182,24 +274,33 @@ fn required_string<'a>(
 }
 
 fn required_string_list(pack: &Map<String, Value>, pack_name: &str, field: &str) -> Result<()> {
+    required_string_values(pack, pack_name, field).map(|_| ())
+}
+
+fn required_string_values<'a>(
+    pack: &'a Map<String, Value>,
+    pack_name: &str,
+    field: &str,
+) -> Result<HashSet<&'a str>> {
     let values = pack.get(field).and_then(Value::as_array).with_context(|| {
         format!(
             "pack '{}' field '{}': expected a non-empty string array",
             pack_name, field
         )
     })?;
-    if values.is_empty()
-        || values
-            .iter()
-            .any(|value| value.as_str().is_none_or(|value| value.trim().is_empty()))
-    {
+    let values: Option<HashSet<_>> = values
+        .iter()
+        .map(|value| value.as_str().filter(|value| !value.trim().is_empty()))
+        .collect();
+    let values = values.filter(|values| !values.is_empty());
+    if values.is_none() {
         bail!(
             "pack '{}' field '{}': expected a non-empty string array",
             pack_name,
             field
         );
     }
-    Ok(())
+    Ok(values.expect("checked above"))
 }
 
 #[cfg(test)]
@@ -234,6 +335,7 @@ mod tests {
                 "cli": ">=0.2.1, <0.4.0",
                 "scenario_schema": 1
             },
+            "evidence_suites": [],
             "packs": [{
                 "id": "bad-status-pack",
                 "title": "Bad status fixture",
@@ -264,5 +366,36 @@ mod tests {
         assert!(error
             .to_string()
             .contains("requires chaos CLI '>=0.2.1, <0.4.0'"));
+    }
+
+    #[test]
+    fn stable_pack_requires_disruption_and_restoration_evidence() {
+        let repository_root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+        let catalog = serde_json::json!({
+            "schema_version": 2,
+            "index_version": "0.3.0",
+            "compatibility": {
+                "cli": ">=0.2.1, <0.4.0",
+                "scenario_schema": 1
+            },
+            "evidence_suites": [],
+            "packs": [{
+                "id": "stable-without-evidence",
+                "title": "Stable fixture",
+                "category": "ai",
+                "status": "stable",
+                "description": "A stable pack must carry CI evidence.",
+                "protocols": ["HTTP"],
+                "requirements": ["None"],
+                "file": "scenario-packs/ai/openai-compatible.yaml",
+                "download_url": "https://example.com/scenario.yaml"
+            }]
+        });
+
+        let error =
+            validate_catalog(&catalog.to_string(), repository_root, |_, _| Ok(())).unwrap_err();
+        assert!(error
+            .to_string()
+            .contains("stable packs require CI disruption and restoration evidence"));
     }
 }
