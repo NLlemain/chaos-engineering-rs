@@ -35,3 +35,6 @@ tower-http = { version = "0.5", features = ["fs", "trace", "cors"] }
 futures = { workspace = true }
 chrono = { workspace = true }
 rand = { workspace = true }
+base64 = "0.22"
+rcgen = { version = "0.13", default-features = false, features = ["crypto", "ring"] }
+sha2 = "0.10"

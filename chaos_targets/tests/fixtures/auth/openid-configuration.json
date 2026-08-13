@@ -1,0 +1,6 @@
+{
+  "issuer": "https://auth.chaos.test",
+  "jwks_uri": "https://auth.chaos.test/.well-known/jwks.json",
+  "token_endpoint": "https://auth.chaos.test/oauth/token",
+  "grant_types_supported": ["authorization_code", "refresh_token"]
+}
