@@ -1,0 +1,17 @@
+name: trading_venue_partition
+description: Partition one simulated venue while leaving other exchange sessions reachable.
+duration: 15s
+labels:
+  category: trading
+  protocol: venue-connectivity
+  status: experimental
+phases:
+  - name: isolate_venue
+    duration: 15s
+    injections:
+      - type: dependency_proxy
+        target:
+          address: 127.0.0.1:9200
+        listen: 127.0.0.1:19200
+        direction: both
+        partition: true

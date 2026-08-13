@@ -1,0 +1,18 @@
+name: fix_session_corruption
+description: Duplicate and corrupt downstream FIX traffic to exercise sequence recovery and checksum rejection.
+duration: 30s
+labels:
+  category: trading
+  protocol: fix
+  status: stable
+phases:
+  - name: corrupt_fix_session
+    duration: 30s
+    injections:
+      - type: dependency_proxy
+        target:
+          address: 127.0.0.1:9876
+        listen: 127.0.0.1:19876
+        direction: downstream
+        duplicate_rate: 0.20
+        corruption_rate: 0.01

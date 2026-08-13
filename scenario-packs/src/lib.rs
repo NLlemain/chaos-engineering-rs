@@ -18,6 +18,7 @@ const KNOWN_CATEGORIES: &[&str] = &[
     "network",
     "object-storage",
     "queues",
+    "trading",
     "windows",
 ];
 const KNOWN_STATUSES: &[&str] = &["stable", "experimental", "planned"];

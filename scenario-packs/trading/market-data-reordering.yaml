@@ -1,0 +1,18 @@
+name: hft_market_data_reordering
+description: Reorder downstream market-data bytes to exercise sequence-gap detection and snapshot recovery.
+duration: 30s
+labels:
+  category: trading
+  protocol: market-data
+  status: stable
+phases:
+  - name: reorder_feed
+    duration: 30s
+    injections:
+      - type: dependency_proxy
+        target:
+          address: 127.0.0.1:9001
+        listen: 127.0.0.1:19001
+        direction: downstream
+        reorder_rate: 1.0
+        reorder_delay: 5ms

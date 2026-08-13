@@ -1,0 +1,18 @@
+name: order_ack_tail_latency
+description: Add deterministic gateway latency and jitter to test p99 acknowledgement budgets and kill switches.
+duration: 30s
+labels:
+  category: trading
+  protocol: order-entry
+  status: stable
+phases:
+  - name: degrade_order_gateway
+    duration: 30s
+    injections:
+      - type: dependency_proxy
+        target:
+          address: 127.0.0.1:9100
+        listen: 127.0.0.1:19100
+        direction: both
+        latency: 2ms
+        jitter: 1ms

@@ -114,6 +114,17 @@
         "object-throttling",
         "object-corrupt-download"
       ]
+    },
+    {
+      "id": "hft-protocol-evidence",
+      "workflow": ".github/workflows/ci.yml",
+      "command": "cargo test --locked -p chaos_hft",
+      "assertions": ["disruption", "restoration"],
+      "packs": [
+        "trading-market-data-reordering",
+        "trading-fix-session-corruption",
+        "trading-order-ack-tail-latency"
+      ]
     }
   ],
   "packs": [
@@ -479,6 +490,50 @@
       "requirements": ["Point the storage client at the local proxy"],
       "file": "scenario-packs/object-storage/corrupt-download.yaml",
       "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/object-storage/corrupt-download.yaml"
+    },
+    {
+      "id": "trading-market-data-reordering",
+      "title": "Market-data reordering",
+      "category": "trading",
+      "status": "stable",
+      "description": "Reorder a downstream feed while deterministic replay verifies sequence detection and exact state recovery.",
+      "protocols": ["Market data", "TCP", "ITCH-like feeds"],
+      "requirements": ["Point a simulated market-data client at the local proxy"],
+      "file": "scenario-packs/trading/market-data-reordering.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/trading/market-data-reordering.yaml"
+    },
+    {
+      "id": "trading-fix-session-corruption",
+      "title": "FIX session corruption",
+      "category": "trading",
+      "status": "stable",
+      "description": "Duplicate and corrupt FIX traffic with message-aware sequence, PossDup, and checksum evidence fixtures.",
+      "protocols": ["FIX 4.x", "TCP"],
+      "requirements": ["Disposable FIX acceptor or checked-in FIX fixture"],
+      "file": "scenario-packs/trading/fix-session-corruption.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/trading/fix-session-corruption.yaml"
+    },
+    {
+      "id": "trading-order-ack-tail-latency",
+      "title": "Order acknowledgement tail latency",
+      "category": "trading",
+      "status": "stable",
+      "description": "Degrade an order gateway and enforce a nanosecond p99 acknowledgement-latency budget.",
+      "protocols": ["Order entry", "FIX", "TCP"],
+      "requirements": ["Simulated order gateway or checked-in acknowledgement fixture"],
+      "file": "scenario-packs/trading/order-ack-tail-latency.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/trading/order-ack-tail-latency.yaml"
+    },
+    {
+      "id": "trading-venue-partition",
+      "title": "Single-venue partition",
+      "category": "trading",
+      "status": "experimental",
+      "description": "Partition one simulated venue to test cancel-on-disconnect, failover, and risk controls.",
+      "protocols": ["Venue connectivity", "TCP"],
+      "requirements": ["Point one simulated venue session at the local proxy"],
+      "file": "scenario-packs/trading/venue-partition.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/trading/venue-partition.yaml"
     },
     {
       "id": "windows-service-outage",
