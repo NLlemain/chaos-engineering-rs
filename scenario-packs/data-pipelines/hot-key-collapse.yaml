@@ -1,0 +1,7 @@
+seed: 4245
+faults:
+  - type: key_collapse
+    every: 3
+    offset: 0
+    key: chaos-hot-partition
+

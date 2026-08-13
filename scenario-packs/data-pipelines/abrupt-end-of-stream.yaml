@@ -1,0 +1,5 @@
+seed: 4243
+faults:
+  - type: truncate_after
+    records: 25
+

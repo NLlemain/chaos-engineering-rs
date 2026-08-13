@@ -1,0 +1,18 @@
+name: grpc_stream_truncation
+description: Cut a long-lived gRPC stream after deterministic transport bytes to test retry and resumability.
+duration: 60s
+labels:
+  category: data-pipelines
+  protocol: grpc
+  status: experimental
+phases:
+  - name: truncate_stream
+    duration: 60s
+    injections:
+      - type: dependency_proxy
+        target:
+          address: 127.0.0.1:50051
+        listen: 127.0.0.1:15051
+        direction: downstream
+        limit_bytes: 8192
+

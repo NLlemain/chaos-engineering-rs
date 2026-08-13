@@ -1,0 +1,6 @@
+seed: 9001
+faults:
+  - type: drop_matching
+    pointer: /kind
+    equals: snapshot
+

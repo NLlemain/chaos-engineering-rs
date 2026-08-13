@@ -60,8 +60,14 @@ struct PackEntry {
     description: String,
     protocols: Vec<String>,
     requirements: Vec<String>,
+    #[serde(default = "default_pack_kind")]
+    kind: String,
     file: Option<String>,
     download_url: Option<String>,
+}
+
+fn default_pack_kind() -> String {
+    "scenario".to_string()
 }
 
 pub async fn execute(args: PackArgs) -> Result<()> {
@@ -142,6 +148,7 @@ fn show(catalog: &PackCatalog, id: &str) -> Result<()> {
     println!("ID:           {}", entry.id);
     println!("Category:     {}", entry.category);
     println!("Status:       {}", entry.status);
+    println!("Kind:         {}", entry.kind);
     println!("Protocols:    {}", entry.protocols.join(", "));
     println!("Requirements: {}", entry.requirements.join(", "));
     println!("\n{}", entry.description);
@@ -183,17 +190,30 @@ async fn install(catalog: &PackCatalog, id: &str, output: PathBuf, force: bool) 
         .with_context(|| format!("Pack download failed for {}", url))?
         .text()
         .await?;
-    let scenario = parse_scenario_from_str(&contents, "yaml")
-        .with_context(|| format!("Downloaded pack '{}' is not a valid scenario", id))?;
-    for phase in &scenario.phases {
-        for injection in &phase.injections {
-            build_injector(injection).with_context(|| {
-                format!(
-                    "Downloaded pack '{}' has invalid '{}' parameters",
-                    id, injection.r#type
-                )
-            })?;
+    match entry.kind.as_str() {
+        "scenario" => {
+            let scenario = parse_scenario_from_str(&contents, "yaml")
+                .with_context(|| format!("Downloaded pack '{}' is not a valid scenario", id))?;
+            for phase in &scenario.phases {
+                for injection in &phase.injections {
+                    build_injector(injection).with_context(|| {
+                        format!(
+                            "Downloaded pack '{}' has invalid '{}' parameters",
+                            id, injection.r#type
+                        )
+                    })?;
+                }
+            }
         }
+        "pipeline_fault_plan" => {
+            let plan: chaos_pipeline::PipelineFaultPlan = serde_yaml::from_str(&contents)
+                .with_context(|| {
+                    format!("Downloaded pack '{}' is not a pipeline fault plan", id)
+                })?;
+            plan.validate()
+                .with_context(|| format!("Downloaded pack '{}' has invalid faults", id))?;
+        }
+        value => bail!("Pack '{}' has unsupported kind '{}'", id, value),
     }
 
     if let Some(parent) = destination.parent() {

@@ -1,0 +1,8 @@
+seed: 7001
+faults:
+  - type: cardinality_explosion
+    every: 1
+    offset: 0
+    pointer: /attributes/tenant_id
+    prefix: chaos-tenant
+

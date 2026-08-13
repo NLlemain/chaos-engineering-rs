@@ -1,0 +1,7 @@
+seed: 7002
+faults:
+  - type: timestamp_regression
+    every: 15
+    offset: 7
+    subtract_ns: 60000000000
+

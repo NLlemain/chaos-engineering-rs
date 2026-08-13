@@ -1,0 +1,7 @@
+seed: 9002
+faults:
+  - type: sequence_reset
+    partition: BTC-USDT
+    at_sequence: 10000
+    to_sequence: 1
+

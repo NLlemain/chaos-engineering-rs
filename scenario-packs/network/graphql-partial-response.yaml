@@ -1,0 +1,19 @@
+name: graphql_partial_response
+description: Truncate GraphQL response bodies to test clients that receive HTTP success with unusable partial JSON.
+duration: 60s
+labels:
+  category: network
+  protocol: graphql
+  status: experimental
+phases:
+  - name: truncate_graphql_json
+    duration: 60s
+    injections:
+      - type: http_fault
+        target:
+          system: true
+        listen: 127.0.0.1:18080
+        upstream: http://127.0.0.1:8080
+        path_pattern: /graphql
+        truncate_body: 64
+

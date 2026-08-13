@@ -31,6 +31,7 @@ jobs:
           set -euo pipefail
           cargo +stable publish --locked -p chaos_core
           cargo +stable publish --locked -p chaos_hft
+          cargo +stable publish --locked -p chaos_pipeline
           cargo +stable publish --locked -p chaos_packs
           sleep 30
       - name: Publish scenario and metrics crates

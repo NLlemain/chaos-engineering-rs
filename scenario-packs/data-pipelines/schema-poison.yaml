@@ -1,0 +1,8 @@
+seed: 4247
+faults:
+  - type: corrupt_field
+    every: 25
+    offset: 5
+    pointer: /schema_version
+    replacement: incompatible-chaos-version
+

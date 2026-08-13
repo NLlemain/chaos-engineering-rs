@@ -67,4 +67,5 @@ jobs:
         run: |
           cargo +stable package --locked -p chaos_core
           cargo +stable package --locked -p chaos_hft
+          cargo +stable package --locked -p chaos_pipeline
           cargo +stable package --locked -p chaos_packs

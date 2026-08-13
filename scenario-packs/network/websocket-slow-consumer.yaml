@@ -1,0 +1,18 @@
+name: websocket_slow_consumer
+description: Restrict downstream feed bandwidth so WebSocket clients exercise slow-consumer and reconnect policy.
+duration: 60s
+labels:
+  category: data-pipelines
+  protocol: websocket
+  status: experimental
+phases:
+  - name: constrain_downstream
+    duration: 60s
+    injections:
+      - type: dependency_proxy
+        target:
+          address: 127.0.0.1:9001
+        listen: 127.0.0.1:19001
+        direction: downstream
+        bandwidth_bps: 1024
+

@@ -1,0 +1,6 @@
+seed: 4246
+faults:
+  - type: drop_matching
+    pointer: /kind
+    equals: transaction_end
+

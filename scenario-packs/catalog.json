@@ -125,6 +125,16 @@
         "trading-fix-session-corruption",
         "trading-order-ack-tail-latency"
       ]
+    },
+    {
+      "id": "zero-buffer-pipeline-evidence",
+      "workflow": ".github/workflows/ci.yml",
+      "command": "cargo test --locked -p chaos_pipeline",
+      "assertions": ["disruption", "restoration"],
+      "packs": [
+        "pipeline-zero-buffer-backpressure",
+        "pipeline-abrupt-end-of-stream"
+      ]
     }
   ],
   "packs": [
@@ -492,6 +502,146 @@
       "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/object-storage/corrupt-download.yaml"
     },
     {
+      "id": "pipeline-zero-buffer-backpressure",
+      "title": "Zero-buffer producer backpressure",
+      "category": "data-pipelines",
+      "status": "stable",
+      "kind": "pipeline_fault_plan",
+      "description": "Stall a capacity-zero rendezvous consumer and measure the resulting producer blocking without hiding records in a queue.",
+      "protocols": ["JSONL", "Zero-buffer channels", "Streaming pipelines", "Backpressure"],
+      "requirements": ["JSON Lines records accepted by chaos pipeline replay"],
+      "file": "scenario-packs/data-pipelines/zero-buffer-backpressure.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/data-pipelines/zero-buffer-backpressure.yaml"
+    },
+    {
+      "id": "pipeline-abrupt-end-of-stream",
+      "title": "Abrupt end-of-stream",
+      "category": "data-pipelines",
+      "status": "stable",
+      "kind": "pipeline_fault_plan",
+      "description": "End a record stream at a deterministic boundary and prove record loss detection plus exact restored replay.",
+      "protocols": ["JSONL", "Event streaming", "ETL", "ELT"],
+      "requirements": ["JSON Lines records accepted by chaos pipeline replay"],
+      "file": "scenario-packs/data-pipelines/abrupt-end-of-stream.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/data-pipelines/abrupt-end-of-stream.yaml"
+    },
+    {
+      "id": "pipeline-event-time-regression",
+      "title": "Event-time and watermark regression",
+      "category": "data-pipelines",
+      "status": "experimental",
+      "kind": "pipeline_fault_plan",
+      "description": "Move selected event timestamps backwards to exercise late-data, watermark, and window-recomputation policy.",
+      "protocols": ["Apache Flink", "Kafka Streams", "Spark Structured Streaming", "Event time"],
+      "requirements": ["Records with timestamp_ns"],
+      "file": "scenario-packs/data-pipelines/event-time-regression.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/data-pipelines/event-time-regression.yaml"
+    },
+    {
+      "id": "pipeline-hot-key-collapse",
+      "title": "Hot-key partition collapse",
+      "category": "data-pipelines",
+      "status": "experimental",
+      "kind": "pipeline_fault_plan",
+      "description": "Collapse selected routing keys onto one value to expose partition skew, head-of-line blocking, and noisy-neighbor behavior.",
+      "protocols": ["Kafka", "Pulsar", "Kinesis", "Partitioned streams"],
+      "requirements": ["Records with routing keys"],
+      "file": "scenario-packs/data-pipelines/hot-key-collapse.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/data-pipelines/hot-key-collapse.yaml"
+    },
+    {
+      "id": "pipeline-cdc-commit-marker-loss",
+      "title": "CDC transaction commit-marker loss",
+      "category": "data-pipelines",
+      "status": "experimental",
+      "kind": "pipeline_fault_plan",
+      "description": "Drop transaction-end records while retaining row changes to test atomicity and incomplete-transaction recovery.",
+      "protocols": ["Debezium", "Change Data Capture", "Outbox", "Transaction streams"],
+      "requirements": ["Normalized records with data.kind transaction_end markers"],
+      "file": "scenario-packs/data-pipelines/cdc-commit-marker-loss.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/data-pipelines/cdc-commit-marker-loss.yaml"
+    },
+    {
+      "id": "pipeline-schema-poison",
+      "title": "Schema-registry poison record",
+      "category": "data-pipelines",
+      "status": "experimental",
+      "kind": "pipeline_fault_plan",
+      "description": "Replace selected schema versions with an incompatible marker to test dead-letter and poison-record handling.",
+      "protocols": ["Schema Registry", "Avro", "Protobuf", "JSON Schema"],
+      "requirements": ["Normalized records with data.schema_version"],
+      "file": "scenario-packs/data-pipelines/schema-poison.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/data-pipelines/schema-poison.yaml"
+    },
+    {
+      "id": "network-websocket-slow-consumer",
+      "title": "WebSocket slow consumer",
+      "category": "data-pipelines",
+      "status": "experimental",
+      "description": "Constrain downstream bandwidth to exercise WebSocket backpressure, queue limits, disconnect, and resubscription behavior.",
+      "protocols": ["WebSocket", "Real-time APIs", "Market data"],
+      "requirements": ["Point the WebSocket client at the local proxy"],
+      "file": "scenario-packs/network/websocket-slow-consumer.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/network/websocket-slow-consumer.yaml"
+    },
+    {
+      "id": "network-grpc-stream-truncation",
+      "title": "gRPC stream truncation",
+      "category": "data-pipelines",
+      "status": "experimental",
+      "description": "Cut a long-lived HTTP/2 transport stream after deterministic bytes to test retry, resume tokens, and idempotency.",
+      "protocols": ["gRPC", "HTTP/2", "Streaming RPC"],
+      "requirements": ["Point the gRPC client at the local proxy"],
+      "file": "scenario-packs/network/grpc-stream-truncation.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/network/grpc-stream-truncation.yaml"
+    },
+    {
+      "id": "network-graphql-partial-response",
+      "title": "GraphQL partial JSON response",
+      "category": "network",
+      "status": "experimental",
+      "description": "Truncate GraphQL response bodies to test HTTP-success responses containing incomplete JSON and partial data.",
+      "protocols": ["GraphQL", "HTTP", "JSON"],
+      "requirements": ["Point the GraphQL client at the local HTTP proxy"],
+      "file": "scenario-packs/network/graphql-partial-response.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/network/graphql-partial-response.yaml"
+    },
+    {
+      "id": "database-redis-response-lag",
+      "title": "Redis directional response lag",
+      "category": "databases",
+      "status": "experimental",
+      "description": "Delay server-to-client Redis traffic while requests remain fast to expose command timeouts, pool pressure, and stale-cache fallback.",
+      "protocols": ["Redis", "RESP", "Valkey", "TCP"],
+      "requirements": ["Point the Redis or Valkey client at the local proxy"],
+      "file": "scenario-packs/databases/redis-response-lag.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/databases/redis-response-lag.yaml"
+    },
+    {
+      "id": "observability-otel-cardinality-explosion",
+      "title": "OpenTelemetry cardinality explosion",
+      "category": "observability",
+      "status": "experimental",
+      "kind": "pipeline_fault_plan",
+      "description": "Create a unique selected attribute value per telemetry record to test collector memory, limits, cost controls, and TSDB protection.",
+      "protocols": ["OpenTelemetry", "OTLP", "Prometheus", "Metrics pipelines"],
+      "requirements": ["Normalized telemetry records with data.attributes.tenant_id"],
+      "file": "scenario-packs/observability/otel-cardinality-explosion.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/observability/otel-cardinality-explosion.yaml"
+    },
+    {
+      "id": "observability-otel-timestamp-regression",
+      "title": "OpenTelemetry timestamp regression",
+      "category": "observability",
+      "status": "experimental",
+      "kind": "pipeline_fault_plan",
+      "description": "Regress selected telemetry timestamps to test temporality conversion, out-of-order samples, and late-span handling.",
+      "protocols": ["OpenTelemetry", "OTLP", "Prometheus remote write", "Tracing"],
+      "requirements": ["Normalized telemetry records with timestamp_ns"],
+      "file": "scenario-packs/observability/otel-timestamp-regression.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/observability/otel-timestamp-regression.yaml"
+    },
+    {
       "id": "trading-market-data-reordering",
       "title": "Market-data reordering",
       "category": "trading",
@@ -534,6 +684,30 @@
       "requirements": ["Point one simulated venue session at the local proxy"],
       "file": "scenario-packs/trading/venue-partition.yaml",
       "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/trading/venue-partition.yaml"
+    },
+    {
+      "id": "trading-crypto-snapshot-loss",
+      "title": "Crypto order-book snapshot loss",
+      "category": "trading",
+      "status": "experimental",
+      "kind": "pipeline_fault_plan",
+      "description": "Drop full-book snapshots while retaining deltas to test exchange reconnect, checksum, and resynchronization policy.",
+      "protocols": ["Crypto exchange WebSocket", "L2 order book", "Snapshot and delta"],
+      "requirements": ["Normalized records with data.kind snapshot"],
+      "file": "scenario-packs/trading/crypto-snapshot-loss.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/trading/crypto-snapshot-loss.yaml"
+    },
+    {
+      "id": "trading-crypto-sequence-reset",
+      "title": "Crypto exchange sequence reset",
+      "category": "trading",
+      "status": "experimental",
+      "kind": "pipeline_fault_plan",
+      "description": "Reset one symbol partition's sequence mid-stream to test stale-delta rejection and forced snapshot recovery.",
+      "protocols": ["Crypto exchange WebSocket", "Market data", "Order book"],
+      "requirements": ["Normalized BTC-USDT partition records"],
+      "file": "scenario-packs/trading/crypto-sequence-reset.yaml",
+      "download_url": "https://raw.githubusercontent.com/Ninian-Lemain/chaos-engineering-rs/main/scenario-packs/trading/crypto-sequence-reset.yaml"
     },
     {
       "id": "windows-service-outage",

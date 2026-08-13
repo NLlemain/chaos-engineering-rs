@@ -12,16 +12,19 @@ const KNOWN_CATEGORIES: &[&str] = &[
     "ai",
     "authentication",
     "containers",
+    "data-pipelines",
     "databases",
     "iot",
     "media",
     "network",
     "object-storage",
+    "observability",
     "queues",
     "trading",
     "windows",
 ];
 const KNOWN_STATUSES: &[&str] = &["stable", "experimental", "planned"];
+const KNOWN_KINDS: &[&str] = &["scenario", "pipeline_fault_plan"];
 
 /// Validate that a CLI version is allowed to consume this pack index.
 pub fn validate_cli_compatibility(catalog_json: &str, cli_version: &str) -> Result<()> {
@@ -52,7 +55,7 @@ pub fn validate_catalog<F>(
     mut parse_scenario: F,
 ) -> Result<()>
 where
-    F: FnMut(&str, &str) -> Result<()>,
+    F: FnMut(&str, &str, &str) -> Result<()>,
 {
     let root: Value = serde_json::from_str(catalog_json).context("catalog field '<document>'")?;
     if root.get("schema_version").and_then(Value::as_u64) != Some(2) {
@@ -99,6 +102,18 @@ where
         required_string(pack, pack_name, "description")?;
         required_string_list(pack, pack_name, "protocols")?;
         required_string_list(pack, pack_name, "requirements")?;
+
+        let kind = pack
+            .get("kind")
+            .and_then(Value::as_str)
+            .unwrap_or("scenario");
+        if !KNOWN_KINDS.contains(&kind) {
+            bail!(
+                "pack '{}' field 'kind': expected scenario or pipeline_fault_plan; got '{}'",
+                pack_name,
+                kind
+            );
+        }
 
         let category = required_string(pack, pack_name, "category")?;
         if !KNOWN_CATEGORIES.contains(&category) {
@@ -151,7 +166,7 @@ where
                     pack_name, source
                 )
             })?;
-        parse_scenario(&contents, format).with_context(|| {
+        parse_scenario(&contents, format, kind).with_context(|| {
             format!(
                 "pack '{}' field 'file': '{}' is not a valid scenario",
                 pack_name, source
@@ -312,9 +327,10 @@ mod tests {
     fn every_catalog_entry_and_source_is_valid() {
         let repository_root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
         let mut parsed_sources = 0usize;
-        validate_catalog(CATALOG_JSON, repository_root, |contents, format| {
+        validate_catalog(CATALOG_JSON, repository_root, |contents, format, kind| {
             assert!(!contents.trim().is_empty());
             assert!(matches!(format, "yaml" | "yml" | "toml" | "json"));
+            assert!(KNOWN_KINDS.contains(&kind));
             parsed_sources += 1;
             Ok(())
         })
@@ -351,7 +367,7 @@ mod tests {
         });
 
         let error =
-            validate_catalog(&catalog.to_string(), repository_root, |_, _| Ok(())).unwrap_err();
+            validate_catalog(&catalog.to_string(), repository_root, |_, _, _| Ok(())).unwrap_err();
         assert!(
             error
                 .to_string()
@@ -394,7 +410,7 @@ mod tests {
         });
 
         let error =
-            validate_catalog(&catalog.to_string(), repository_root, |_, _| Ok(())).unwrap_err();
+            validate_catalog(&catalog.to_string(), repository_root, |_, _, _| Ok(())).unwrap_err();
         assert!(error
             .to_string()
             .contains("stable packs require CI disruption and restoration evidence"));

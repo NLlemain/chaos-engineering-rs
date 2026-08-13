@@ -1,0 +1,19 @@
+name: redis_response_lag
+description: Delay Redis responses without slowing requests to expose command timeout, pool, and stale-cache behavior.
+duration: 60s
+labels:
+  category: databases
+  protocol: redis
+  status: experimental
+phases:
+  - name: delay_responses
+    duration: 60s
+    injections:
+      - type: dependency_proxy
+        target:
+          address: 127.0.0.1:6379
+        listen: 127.0.0.1:16379
+        direction: downstream
+        latency: 250ms
+        jitter: 50ms
+

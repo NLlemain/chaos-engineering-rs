@@ -744,6 +744,20 @@ mod tests {
     }
 
     #[test]
+    fn abrupt_end_of_stream_is_detected_and_restored() {
+        let plan = PipelineFaultPlan {
+            seed: 8,
+            faults: vec![PipelineFault::TruncateAfter { records: 3 }],
+        };
+        let result = evidence(&records(), &plan, &PipelineBudget::default()).unwrap();
+        assert_eq!(result.impact.truncated, 3);
+        assert_eq!(result.chaos.records_lost, 3);
+        assert!(!result.chaos.passed);
+        assert!(result.disruption_observed);
+        assert!(result.restoration_verified);
+    }
+
+    #[test]
     fn parser_names_the_bad_jsonl_record() {
         let error = parse_json_lines("{\"sequence\":1}\nnot-json").unwrap_err();
         assert!(error.to_string().contains("pipeline record 2"));
@@ -790,5 +804,31 @@ mod tests {
         assert!(result.impact.keys_collapsed > 0);
         assert!(result.disruption_observed);
         assert!(result.restoration_verified);
+    }
+
+    #[test]
+    fn shipped_stable_pipeline_plans_prove_disruption_and_restoration() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap();
+        let input = (1..=30)
+            .map(|sequence| PipelineRecord {
+                sequence,
+                partition: "events".into(),
+                key: Some(format!("event-{sequence}")),
+                timestamp_ns: Some(sequence * 1_000),
+                data: json!({"kind": "event", "value": sequence}),
+            })
+            .collect::<Vec<_>>();
+        for filename in ["zero-buffer-backpressure.yaml", "abrupt-end-of-stream.yaml"] {
+            let contents =
+                std::fs::read_to_string(root.join("scenario-packs/data-pipelines").join(filename))
+                    .unwrap();
+            let plan: PipelineFaultPlan = serde_yaml::from_str(&contents).unwrap();
+            let result = evidence(&input, &plan, &PipelineBudget::default()).unwrap();
+            assert!(result.disruption_observed, "{filename}");
+            assert!(result.restoration_verified, "{filename}");
+            assert!(result.zero_buffer_verified, "{filename}");
+        }
     }
 }
