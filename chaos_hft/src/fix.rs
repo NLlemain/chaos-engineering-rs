@@ -70,7 +70,7 @@ impl FixMessage {
         let body_fields: Vec<_> = self
             .fields
             .iter()
-            .filter(|(tag, _)| !matches!(*tag, 8 | 9 | 10))
+            .filter(|(tag, _)| !matches!(*tag, 8..=10))
             .collect();
         let body = body_fields
             .iter()

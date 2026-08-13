@@ -1,0 +1,9 @@
+- type: poss_dup
+  sequence: 1
+- type: duplicate
+  sequence: 1
+- type: sequence_gap
+  at: 2
+  gap: 3
+- type: corrupt_checksum
+  sequence: 2

@@ -1,10 +1,14 @@
+pub mod agent;
 pub mod ai_proxy;
 pub mod attach;
 pub mod container;
 pub mod database;
+pub mod distributed;
 pub mod dns_proxy;
 pub mod doctor;
 pub mod dry_run;
+pub mod hft;
+pub mod history;
 pub mod list;
 pub mod pack;
 pub mod proxy;

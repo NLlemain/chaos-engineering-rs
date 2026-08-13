@@ -52,7 +52,7 @@ pub struct MarketEvent {
     pub kind: EventKind,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InvariantBudget {
     #[serde(default)]
     pub max_sequence_gaps: usize,
@@ -66,19 +66,6 @@ pub struct InvariantBudget {
     pub max_crossed_books: usize,
     #[serde(default)]
     pub max_p99_ack_latency_ns: Option<u64>,
-}
-
-impl Default for InvariantBudget {
-    fn default() -> Self {
-        Self {
-            max_sequence_gaps: 0,
-            max_duplicates: 0,
-            max_out_of_order: 0,
-            max_stale_timestamps: 0,
-            max_crossed_books: 0,
-            max_p99_ack_latency_ns: None,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

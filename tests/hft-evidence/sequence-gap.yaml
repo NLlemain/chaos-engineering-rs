@@ -1,0 +1,5 @@
+seed: 424242
+faults:
+  - type: drop_every
+    every: 100
+    offset: 2

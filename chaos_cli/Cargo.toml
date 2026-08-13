@@ -18,6 +18,8 @@ path = "src/main.rs"
 
 [dependencies]
 chaos_core = { version = "0.3.0", path = "../chaos_core" }
+chaos_control = { version = "0.3.0", path = "../chaos_control" }
+chaos_hft = { version = "0.3.0", path = "../chaos_hft" }
 chaos_scenarios = { version = "0.3.0", path = "../chaos_scenarios" }
 chaos_metrics = { version = "0.3.0", path = "../chaos_metrics" }
 chaos_web = { version = "0.3.0", path = "../chaos_web" }

@@ -1,0 +1,6 @@
+{"sequence":1,"timestamp_ns":1000000,"venue":"XNAS","symbol":"ACME","type":"book_update","side":"bid","price_ticks":10000,"quantity":120,"action":"upsert"}
+{"sequence":2,"timestamp_ns":1000100,"venue":"XNAS","symbol":"ACME","type":"book_update","side":"ask","price_ticks":10002,"quantity":90,"action":"upsert"}
+{"sequence":3,"timestamp_ns":1000200,"venue":"XNAS","symbol":"ACME","type":"order_ack","client_order_id":"order-1","accepted":true,"latency_ns":24000}
+{"sequence":4,"timestamp_ns":1000300,"venue":"XNAS","symbol":"ACME","type":"trade","price_ticks":10001,"quantity":10}
+{"sequence":5,"timestamp_ns":1000400,"venue":"XNAS","symbol":"ACME","type":"book_update","side":"bid","price_ticks":10001,"quantity":40,"action":"upsert"}
+{"sequence":6,"timestamp_ns":1000500,"venue":"XNAS","symbol":"ACME","type":"heartbeat"}

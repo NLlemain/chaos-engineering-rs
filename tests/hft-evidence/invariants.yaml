@@ -1,0 +1,6 @@
+max_sequence_gaps: 0
+max_duplicates: 0
+max_out_of_order: 0
+max_stale_timestamps: 0
+max_crossed_books: 0
+max_p99_ack_latency_ns: 100000

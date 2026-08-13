@@ -179,6 +179,18 @@ enum Commands {
 
     /// Disrupt a local DuckDB or SQLite database file
     Database(commands::database::DatabaseArgs),
+
+    /// Replay market-data and FIX faults with deterministic evidence
+    Hft(commands::hft::HftArgs),
+
+    /// Run a mutually authenticated remote experiment agent
+    Agent(commands::agent::AgentArgs),
+
+    /// Coordinate a policy-gated experiment across remote agents
+    Distributed(commands::distributed::DistributedArgs),
+
+    /// Inspect and prune central distributed experiment history
+    History(commands::history::HistoryArgs),
 }
 
 #[tokio::main]
@@ -288,6 +300,18 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::Database(args) => {
             commands::database::execute(args).await?;
+        }
+        Commands::Hft(args) => {
+            commands::hft::execute(args).await?;
+        }
+        Commands::Agent(args) => {
+            commands::agent::execute(args).await?;
+        }
+        Commands::Distributed(args) => {
+            commands::distributed::execute(args).await?;
+        }
+        Commands::History(args) => {
+            commands::history::execute(args)?;
         }
     }
 
