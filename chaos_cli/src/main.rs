@@ -7,7 +7,7 @@ use tracing::Level;
 
 #[derive(Parser)]
 #[command(name = "chaos")]
-#[command(about = "Production-grade chaos testing framework for Rust async services", long_about = None)]
+#[command(about = "Deterministic chaos engineering for distributed and latency-critical systems", long_about = None)]
 #[command(version)]
 struct Cli {
     #[command(subcommand)]

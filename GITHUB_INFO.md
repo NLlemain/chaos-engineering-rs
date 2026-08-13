@@ -4,11 +4,11 @@ Repository: `Ninian-Lemain/chaos-engineering-rs`
 
 ## Description
 
-Cross-platform chaos testing with rootless network/API faults, recovery, SLO gates, Docker/database targets, telemetry, and downloadable protocol packs.
+Deterministic chaos engineering for distributed and latency-critical systems. mTLS agents, Kubernetes recovery, SLO gates, and HFT/FIX market-data fault replay in Rust.
 
 ## Topics
 
-`chaos-engineering`, `resilience-testing`, `fault-injection`, `rust`, `sre`, `devops`, `docker`, `kubernetes`, `observability`, `opentelemetry`, `prometheus`, `ai-testing`, `database-testing`, `windows`, `github-actions`
+`chaos-engineering`, `fault-injection`, `resilience-testing`, `distributed-systems`, `rust`, `kubernetes`, `sre`, `observability`, `high-frequency-trading`, `quantitative-finance`, `algorithmic-trading`, `market-data`, `fix-protocol`, `fintech`, `mtls`, `docker`, `opentelemetry`, `prometheus`, `ai-testing`, `github-actions`
 
 ## Community
 
@@ -22,5 +22,5 @@ Cross-platform chaos testing with rootless network/API faults, recovery, SLO gat
 - GitHub Release artifacts: Windows x64, Linux x64, macOS x64, macOS arm64.
 - Artifact provenance: GitHub attestations plus SHA-256 files.
 - Container: `ghcr.io/ninian-lemain/chaos-engineering-rs`.
-- Action: `Ninian-Lemain/chaos-engineering-rs@v0.2.1`.
+- Action: `Ninian-Lemain/chaos-engineering-rs@v0.4.0`.
 - Package-manager manifests are rendered from release checksums.

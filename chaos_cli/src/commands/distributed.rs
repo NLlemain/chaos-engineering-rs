@@ -75,3 +75,33 @@ async fn read_struct<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T> {
         ),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn checked_in_manifest_and_policy_are_valid() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+        let experiment: DistributedExperiment =
+            read_struct(&root.join("examples/distributed-experiment.yaml"))
+                .await
+                .unwrap();
+        let policy: ExperimentPolicy = read_struct(&root.join("examples/distributed-policy.yaml"))
+            .await
+            .unwrap();
+        experiment.validate().unwrap();
+        policy.validate().unwrap();
+        assert_eq!(experiment.target_count(), 2);
+        assert_eq!(
+            policy
+                .effective_parallel_limit(
+                    experiment.max_parallel_targets,
+                    experiment.target_count(),
+                    experiment.max_blast_radius_percent,
+                )
+                .unwrap(),
+            1
+        );
+    }
+}

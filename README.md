@@ -1,21 +1,23 @@
-# chaos-engineering-rs
+# Chaos Engineering RS
 
 [![CI](https://github.com/Ninian-Lemain/chaos-engineering-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/Ninian-Lemain/chaos-engineering-rs/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/Ninian-Lemain/chaos-engineering-rs)](https://github.com/Ninian-Lemain/chaos-engineering-rs/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE-MIT)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-555)](#capability-matrix)
 
-Cross-platform chaos testing for processes, containers, dependencies, databases, HTTP services, AI APIs, and CI SLO gates. It includes rootless proxy faults, a recovery journal, live Prometheus/OpenTelemetry telemetry, downloadable protocol packs, and a local dashboard.
+**Deterministic failure engineering for distributed and latency-critical systems.**
+
+Chaos Engineering RS is a Rust CLI and library for evidence-driven fault injection. It coordinates mutually authenticated remote agents, enforces blast-radius and SLO policy, applies reversible Kubernetes and rootless dependency faults, and records reproducible experiments. Its HFT lab replays market data and FIX sessions through seeded faults while checking sequence integrity, order-book state, acknowledgement latency, and exact recovery.
 
 ![Chaos dashboard](docs/assets/dashboard.png)
 
-## Why This Project
+## What Makes It Different
 
-- **Honest effects:** an injector cannot report success unless it produced a measurable disruption.
-- **Recovery first:** every recoverable effect is journaled before execution and can be cleaned up after interruption.
-- **Rootless by default:** dependency, DNS, TLS, HTTP, AI, database, queue, media, and storage faults can run through local proxies without administrator privileges.
-- **CI ready:** SLO assertions return a failing exit code, reports compare baseline and chaos runs, and the repository includes a reusable GitHub Action.
-- **Protocol packs:** specialized failure scenarios stay downloadable instead of turning the core into a collection of protocol clients.
+- **Distributed control:** mTLS agents use prepare/execute/recover commands, deterministic per-target seeds, coordinated phases, and policy-bounded parallelism.
+- **Market-microstructure evidence:** replay market-data gaps, duplicates, reordering, clock skew, venue partitions, and order-ack latency; mutate FIX sequence, `PossDup`, reject, and checksum behavior.
+- **Recovery first:** every recoverable effect is journaled, Kubernetes changes retain their original state, and interrupted experiments can be stopped centrally.
+- **Honest effects:** an injector cannot report success unless it produced a measurable disruption; stable packs require CI evidence for disruption and restoration.
+- **Rootless and CI ready:** dependency, DNS, TLS, HTTP, AI, database, queue, media, storage, and trading faults can run through local proxies with SLO exit gates.
 
 ![Thirty-second terminal tour](docs/assets/terminal-demo.gif)
 
@@ -55,6 +57,52 @@ chaos serve --host 127.0.0.1 --port 8080
 
 See [QUICKSTART.md](QUICKSTART.md) for proxy, Docker, database, telemetry, report, and recovery examples.
 
+## HFT And Quant Engineering
+
+The HFT workflow is deterministic and offline by default. A JSON Lines event stream is replayed three ways: baseline, faulted, and restored. The command fails unless the baseline satisfies its invariant budget, chaos has a measurable effect, and restored state exactly matches the baseline digest.
+
+```bash
+chaos hft replay tests/hft-evidence/market-events.jsonl \
+  --fault-plan tests/hft-evidence/sequence-gap.yaml \
+  --budget tests/hft-evidence/invariants.yaml \
+  --output hft-evidence.json
+
+chaos hft fix tests/hft-evidence/orders.fix \
+  --fault-plan tests/hft-evidence/fix-faults.yaml \
+  --output faulted-orders.fix
+```
+
+Evidence covers per-venue sequence gaps, duplicate and out-of-order messages, stale timestamps, crossed books, rejected orders, p50/p99 acknowledgement latency, deterministic state hashes, FIX gaps, duplicates, `PossDup`, execution rejects, and checksum corruption. Download network experiments with `chaos pack list --category trading`.
+
+## Distributed Experiments
+
+Agents reject clients without a certificate signed by the configured CA. Both the orchestrator and each agent enforce injector, target, schedule, duration, SLO, target-count, parallelism, and blast-radius policy before a scenario can run.
+
+```bash
+chaos agent serve --id ams-1 --listen 0.0.0.0:9443 \
+  --ca-cert certs/ca.pem --cert certs/ams-1.pem --key certs/ams-1-key.pem \
+  --policy examples/distributed-policy.yaml
+
+chaos distributed examples/distributed-experiment.yaml \
+  --ca-cert certs/ca.pem --cert certs/orchestrator.pem \
+  --key certs/orchestrator-key.pem --policy examples/distributed-policy.yaml
+
+chaos history list
+chaos history show EXPERIMENT_ID
+chaos history prune --max-runs 500 --max-age-days 30
+```
+
+Central SQLite history stores the exact root seed, per-target results, manifest and policy SHA-256 digests, and content-addressed artifacts. See [Distributed Experiments](docs/DISTRIBUTED.md) for certificate and manifest setup.
+
+## Kubernetes Faults
+
+`kubernetes_fault` is experimental and uses the current `kubectl` identity. Before mutation it confirms RBAC for every required operation. Network isolation deterministically labels only the policy-bounded pod subset and applies an empty ingress/egress `NetworkPolicy`; cleanup removes both. Deployment and StatefulSet scale faults record and restore the original replica count.
+
+```bash
+chaos dry-run examples/kubernetes-network-isolation.yaml
+chaos run examples/kubernetes-network-isolation.yaml
+```
+
 ## Rootless Faults
 
 `chaos proxy` provides directional latency, jitter, bandwidth limits, connection timeouts, slow closes, byte limits, partitions, corruption, duplication, reordering, and connection-pool pressure. `chaos dns-proxy`, `chaos tls-endpoint`, and `chaos ai-proxy` add DNS answers, TLS handshake failures, HTTP delay/status/body/header faults, delayed tokens, broken SSE streams, malformed tool calls, 429 storms, and context truncation.
@@ -71,7 +119,7 @@ Point the application at the local listener; no kernel network rules are require
 
 ## Scenario Packs
 
-The catalog covers AI APIs, authentication, containers, databases, IoT/MQTT, media/HLS/WebRTC, object storage, queues, network/DNS, and Windows. Search and install only what a test needs:
+The catalog covers AI APIs, authentication, containers, databases, IoT/MQTT, media/HLS/WebRTC, object storage, queues, trading/FIX/market data, network/DNS, and Windows. Search and install only what a test needs:
 
 ```bash
 chaos pack list --category ai
@@ -106,7 +154,7 @@ chaos report chaos.json --compare baseline.json --format markdown --output compa
 Use the repository action from another workflow:
 
 ```yaml
-- uses: Ninian-Lemain/chaos-engineering-rs@v0.2.1
+- uses: Ninian-Lemain/chaos-engineering-rs@v0.4.0
   with:
     scenario: scenarios/api-slo.yaml
     output: chaos-result.json
@@ -176,7 +224,7 @@ Integration tests verify that stable effects disrupt their target and restore re
 Verify a downloaded release artifact with GitHub CLI:
 
 ```bash
-gh attestation verify chaos-v0.2.1-x86_64-unknown-linux-gnu.tar.gz \
+gh attestation verify chaos-v0.4.0-x86_64-unknown-linux-gnu.tar.gz \
   --repo Ninian-Lemain/chaos-engineering-rs
 ```
 

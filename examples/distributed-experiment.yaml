@@ -1,0 +1,51 @@
+api_version: chaos.engineering/v1
+name: two_venue_market_data_degradation
+seed: 424242
+max_parallel_targets: 2
+max_blast_radius_percent: 50
+agents:
+  - id: ams-1
+    address: 127.0.0.1:9443
+    server_name: ams-1.chaos.test
+    labels:
+      region: eu-west
+  - id: ams-2
+    address: 127.0.0.1:9444
+    server_name: ams-2.chaos.test
+    labels:
+      region: eu-west
+phases:
+  - name: degrade_one_venue_at_a_time
+    assignments:
+      - target_id: xnas-market-data
+        agent_id: ams-1
+        scenario:
+          name: xnas_feed_reordering
+          duration: 15s
+          phases:
+            - name: reorder_feed
+              duration: 15s
+              injections:
+                - type: dependency_proxy
+                  target:
+                    address: 127.0.0.1:9001
+                  listen: 127.0.0.1:19001
+                  direction: downstream
+                  reorder_rate: 1.0
+                  reorder_delay: 5ms
+      - target_id: xlon-market-data
+        agent_id: ams-2
+        scenario:
+          name: xlon_feed_reordering
+          duration: 15s
+          phases:
+            - name: reorder_feed
+              duration: 15s
+              injections:
+                - type: dependency_proxy
+                  target:
+                    address: 127.0.0.1:9001
+                  listen: 127.0.0.1:19001
+                  direction: downstream
+                  reorder_rate: 1.0
+                  reorder_delay: 5ms

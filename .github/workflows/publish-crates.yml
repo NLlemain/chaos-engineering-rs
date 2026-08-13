@@ -30,6 +30,7 @@ jobs:
         run: |
           set -euo pipefail
           cargo +stable publish --locked -p chaos_core
+          cargo +stable publish --locked -p chaos_hft
           cargo +stable publish --locked -p chaos_packs
           sleep 30
       - name: Publish scenario and metrics crates
@@ -39,6 +40,8 @@ jobs:
           cargo +stable publish --locked -p chaos_scenarios
           sleep 30
           cargo +stable publish --locked -p chaos_metrics
+          sleep 30
+          cargo +stable publish --locked -p chaos_control
           sleep 30
       - name: Publish dashboard and CLI
         shell: bash

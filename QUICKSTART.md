@@ -90,7 +90,47 @@ chaos pack show database-postgres-disconnect
 chaos pack install database-postgres-disconnect --output ./scenarios
 ```
 
-The catalog also contains authentication, queues, MQTT, media, object storage, containers, network, and Windows packs.
+The catalog also contains authentication, queues, MQTT, media, object storage, containers, trading, network, and Windows packs.
+
+## Replay Market And FIX Faults
+
+```bash
+chaos hft replay tests/hft-evidence/market-events.jsonl \
+  --fault-plan tests/hft-evidence/sequence-gap.yaml \
+  --budget tests/hft-evidence/invariants.yaml \
+  --output test_results/hft-evidence.json
+
+chaos hft fix tests/hft-evidence/orders.fix \
+  --fault-plan tests/hft-evidence/fix-faults.yaml \
+  --output test_results/faulted-orders.fix
+```
+
+The replay succeeds only when chaos is measurable and restoration exactly reproduces the baseline state digest. See [docs/HFT.md](docs/HFT.md) for the event schema, invariant budgets, and research direction.
+
+## Coordinate Remote Agents
+
+Create development certificates as described in [docs/DISTRIBUTED.md](docs/DISTRIBUTED.md), start each agent with its local policy, then run:
+
+```bash
+chaos distributed examples/distributed-experiment.yaml \
+  --ca-cert certs/ca.pem \
+  --cert certs/orchestrator.pem \
+  --key certs/orchestrator-key.pem \
+  --policy examples/distributed-policy.yaml
+
+chaos history list
+```
+
+The manifest requests 50% blast radius across two simulated venue feeds, so no more than one target runs at once.
+
+## Isolate Kubernetes Workloads
+
+```bash
+chaos dry-run examples/kubernetes-network-isolation.yaml
+chaos run examples/kubernetes-network-isolation.yaml
+```
+
+The injector checks `kubectl auth can-i`, selects a deterministic subset of matching pods, verifies the temporary `NetworkPolicy`, and journals the labels and policy name for cleanup.
 
 ## Compare Baseline And Chaos
 

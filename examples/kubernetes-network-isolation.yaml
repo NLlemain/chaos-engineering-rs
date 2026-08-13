@@ -1,0 +1,22 @@
+name: bounded_market_data_pod_isolation
+description: Isolate at most one quarter of matching market-data pods and restore the NetworkPolicy and labels.
+seed: 424242
+duration: 20s
+phases:
+  - name: isolate_feed_handlers
+    duration: 20s
+    injections:
+      - type: kubernetes_fault
+        target:
+          kubernetes:
+            context: development
+            namespace: trading-sim
+            kind: deployment
+            name: market-data-handler
+            selector: app=market-data-handler
+        mode: network_isolation
+        blast_radius_percent: 25
+        max_pods: 2
+        seed: 424242
+        deny_ingress: true
+        deny_egress: true

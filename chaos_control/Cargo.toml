@@ -14,8 +14,8 @@ categories = ["development-tools::testing", "network-programming", "asynchronous
 
 [dependencies]
 anyhow = { workspace = true }
-chaos_core = { version = "0.3.0", path = "../chaos_core" }
-chaos_scenarios = { version = "0.3.0", path = "../chaos_scenarios" }
+chaos_core = { version = "0.4.0", path = "../chaos_core" }
+chaos_scenarios = { version = "0.4.0", path = "../chaos_scenarios" }
 chrono = { workspace = true }
 futures = { workspace = true }
 humantime = { workspace = true }

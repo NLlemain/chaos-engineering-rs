@@ -331,9 +331,9 @@ mod tests {
         let repository_root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
         let catalog = serde_json::json!({
             "schema_version": 2,
-            "index_version": "0.3.0",
+            "index_version": "0.4.0",
             "compatibility": {
-                "cli": ">=0.2.1, <0.4.0",
+                "cli": ">=0.4.0, <0.5.0",
                 "scenario_schema": 1
             },
             "evidence_suites": [],
@@ -362,11 +362,11 @@ mod tests {
 
     #[test]
     fn compatibility_rejects_unsupported_cli_versions() {
-        assert!(validate_cli_compatibility(CATALOG_JSON, "0.2.1").is_ok());
-        let error = validate_cli_compatibility(CATALOG_JSON, "0.4.0").unwrap_err();
+        assert!(validate_cli_compatibility(CATALOG_JSON, "0.4.0").is_ok());
+        let error = validate_cli_compatibility(CATALOG_JSON, "0.5.0").unwrap_err();
         assert!(error
             .to_string()
-            .contains("requires chaos CLI '>=0.2.1, <0.4.0'"));
+            .contains("requires chaos CLI '>=0.4.0, <0.5.0'"));
     }
 
     #[test]
@@ -374,9 +374,9 @@ mod tests {
         let repository_root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
         let catalog = serde_json::json!({
             "schema_version": 2,
-            "index_version": "0.3.0",
+            "index_version": "0.4.0",
             "compatibility": {
-                "cli": ">=0.2.1, <0.4.0",
+                "cli": ">=0.4.0, <0.5.0",
                 "scenario_schema": 1
             },
             "evidence_suites": [],

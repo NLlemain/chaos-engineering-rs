@@ -13,7 +13,7 @@ keywords = ["chaos-engineering", "resilience", "slo", "testing"]
 categories = ["development-tools::testing", "config", "asynchronous"]
 
 [dependencies]
-chaos_core = { version = "0.3.0", path = "../chaos_core" }
+chaos_core = { version = "0.4.0", path = "../chaos_core" }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

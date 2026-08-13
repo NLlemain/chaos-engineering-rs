@@ -27,11 +27,19 @@ The roadmap favors credibility, recovery, and protocol depth over an inflated in
 
 ## v0.4 - Distributed Experiments
 
-- [ ] Remote agents with mutually authenticated control channels.
-- [ ] Coordinated multi-target phases and blast-radius limits.
-- [ ] Kubernetes workload selection and reversible pod/network policies.
-- [ ] Central experiment history with reproducible seeds and artifact retention.
-- [ ] Policy controls for allowed injectors, targets, schedules, and SLO budgets.
+- [x] Remote agents with mutually authenticated control channels.
+- [x] Coordinated multi-target phases and blast-radius limits.
+- [x] Kubernetes workload selection and reversible pod/network policies.
+- [x] Central experiment history with reproducible seeds and artifact retention.
+- [x] Policy controls for allowed injectors, targets, schedules, and SLO budgets.
+
+## v0.5 - Market Systems Evidence
+
+- [ ] Import PCAP, ITCH, OUCH, and FIX captures into the deterministic replay schema.
+- [ ] Model exchange clocks, hardware timestamps, queueing delay, and clock-domain drift.
+- [ ] Assert cross-venue failover, cancel-on-disconnect, kill-switch, position, and notional invariants.
+- [ ] Attribute tail latency across network, gateway, risk, matching, and strategy stages.
+- [ ] Add counterfactual replay reports for fill, slippage, exposure, and PnL divergence.
 
 ## Contribution Areas
 

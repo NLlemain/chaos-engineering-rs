@@ -8,8 +8,8 @@ repository.workspace = true
 homepage.workspace = true
 readme.workspace = true
 rust-version.workspace = true
-description = "Cross-platform chaos engineering CLI with recovery, SLO gates, and protocol packs"
-keywords = ["chaos-engineering", "resilience", "fault-injection", "cli", "testing"]
+description = "Distributed chaos and HFT fault replay CLI with recovery, policy, and SLO evidence"
+keywords = ["chaos-engineering", "hft", "distributed-systems", "fault-injection", "cli"]
 categories = ["command-line-utilities", "development-tools::testing"]
 
 [[bin]]
@@ -17,13 +17,13 @@ name = "chaos"
 path = "src/main.rs"
 
 [dependencies]
-chaos_core = { version = "0.3.0", path = "../chaos_core" }
-chaos_control = { version = "0.3.0", path = "../chaos_control" }
-chaos_hft = { version = "0.3.0", path = "../chaos_hft" }
-chaos_scenarios = { version = "0.3.0", path = "../chaos_scenarios" }
-chaos_metrics = { version = "0.3.0", path = "../chaos_metrics" }
-chaos_web = { version = "0.3.0", path = "../chaos_web" }
-chaos_packs = { version = "0.3.0", path = "../scenario-packs" }
+chaos_core = { version = "0.4.0", path = "../chaos_core" }
+chaos_control = { version = "0.4.0", path = "../chaos_control" }
+chaos_hft = { version = "0.4.0", path = "../chaos_hft" }
+chaos_scenarios = { version = "0.4.0", path = "../chaos_scenarios" }
+chaos_metrics = { version = "0.4.0", path = "../chaos_metrics" }
+chaos_web = { version = "0.4.0", path = "../chaos_web" }
+chaos_packs = { version = "0.4.0", path = "../scenario-packs" }
 tokio = { workspace = true }
 clap = { workspace = true }
 colored = { workspace = true }

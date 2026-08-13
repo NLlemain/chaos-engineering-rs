@@ -2,6 +2,25 @@
 
 All notable changes are documented here. This project follows semantic versioning.
 
+## 0.4.0 - 2026-08-13
+
+### Added
+
+- Mutual-TLS remote agents with authenticated prepare, execute, recover, ping, and emergency stop commands.
+- Policy-gated distributed phases with deterministic per-target seeds and percentage/absolute blast-radius limits.
+- Central SQLite experiment history with manifest and policy digests, SHA-256 artifacts, and age/count/byte retention.
+- Reversible Kubernetes pod network isolation and Deployment/StatefulSet scale-to-zero faults with preflight RBAC checks.
+- Deterministic HFT market-event replay with sequence, timestamp, crossed-book, rejection, and p50/p99 acknowledgement-latency invariants.
+- FIX session parsing and seeded sequence-gap, duplication, PossDup, reject, and checksum faults.
+- Stable evidence-backed trading scenario packs for market-data reordering, FIX corruption, and order-ack tail latency.
+- `chaos agent`, `chaos distributed`, `chaos history`, and `chaos hft` command groups.
+
+### Changed
+
+- Project positioning now focuses on distributed and latency-critical systems, including quantitative trading infrastructure.
+- Runtime capability metadata now includes the experimental `kubernetes_fault` injector.
+- Distributed runs support cancellation-aware scenario cleanup and retain exact reproducibility metadata.
+
 ## 0.3.0 - 2026-08-13
 
 ### Added
