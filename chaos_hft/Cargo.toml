@@ -1,0 +1,24 @@
+[package]
+name = "chaos_hft"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+rust-version.workspace = true
+description = "Deterministic market-data and FIX fault replay for latency-critical trading systems"
+keywords = ["hft", "fix-protocol", "market-data", "fault-injection", "trading"]
+categories = ["development-tools::testing", "simulation"]
+
+[dependencies]
+anyhow = { workspace = true }
+rand = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
