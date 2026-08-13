@@ -77,6 +77,28 @@ pub enum PipelineFault {
         start_sequence: u64,
         end_sequence: u64,
     },
+    DropMatching {
+        pointer: String,
+        equals: Value,
+    },
+    SequenceReset {
+        partition: String,
+        at_sequence: u64,
+        to_sequence: u64,
+    },
+    CardinalityExplosion {
+        every: usize,
+        #[serde(default)]
+        offset: usize,
+        pointer: String,
+        prefix: String,
+    },
+    KeyCollapse {
+        every: usize,
+        #[serde(default)]
+        offset: usize,
+        key: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -96,6 +118,10 @@ pub struct FaultImpact {
     pub timestamps_regressed: usize,
     pub fields_corrupted: usize,
     pub partition_records_dropped: usize,
+    pub matching_records_dropped: usize,
+    pub sequences_reset: usize,
+    pub cardinality_values_created: usize,
+    pub keys_collapsed: usize,
     pub maximum_requested_stall_ms: u64,
 }
 
@@ -109,6 +135,10 @@ impl FaultImpact {
             + self.timestamps_regressed
             + self.fields_corrupted
             + self.partition_records_dropped
+            + self.matching_records_dropped
+            + self.sequences_reset
+            + self.cardinality_values_created
+            + self.keys_collapsed
     }
 
     fn has_data_effect(&self) -> bool {
@@ -189,7 +219,9 @@ impl PipelineFaultPlan {
                 | PipelineFault::DuplicateEvery { every, .. }
                 | PipelineFault::ReorderAdjacent { every, .. }
                 | PipelineFault::TimestampRegression { every, .. }
-                | PipelineFault::CorruptField { every, .. } => {
+                | PipelineFault::CorruptField { every, .. }
+                | PipelineFault::CardinalityExplosion { every, .. }
+                | PipelineFault::KeyCollapse { every, .. } => {
                     ensure!(*every > 0, "fault cadence must be greater than zero");
                 }
                 PipelineFault::TruncateAfter { .. } => {}
@@ -204,12 +236,25 @@ impl PipelineFaultPlan {
                         "partition outage start sequence must not exceed its end"
                     );
                 }
+                PipelineFault::SequenceReset { partition, .. } => {
+                    ensure!(!partition.trim().is_empty(), "partition cannot be empty");
+                }
+                PipelineFault::DropMatching { .. } => {}
             }
-            if let PipelineFault::CorruptField { pointer, .. } = fault {
+            if let PipelineFault::CorruptField { pointer, .. }
+            | PipelineFault::DropMatching { pointer, .. }
+            | PipelineFault::CardinalityExplosion { pointer, .. } = fault
+            {
                 ensure!(
                     pointer.starts_with('/'),
-                    "corrupt field pointer must be a JSON Pointer beginning with '/'"
+                    "field pointer must be a JSON Pointer beginning with '/'"
                 );
+            }
+            if let PipelineFault::CardinalityExplosion { prefix, .. } = fault {
+                ensure!(!prefix.is_empty(), "cardinality prefix cannot be empty");
+            }
+            if let PipelineFault::KeyCollapse { key, .. } = fault {
+                ensure!(!key.is_empty(), "collapsed key cannot be empty");
             }
         }
         Ok(())
@@ -329,6 +374,58 @@ impl PipelineFaultPlan {
                                 .contains(&delivery.record.sequence)
                     });
                     impact.partition_records_dropped += before - deliveries.len();
+                }
+                PipelineFault::DropMatching { pointer, equals } => {
+                    let before = deliveries.len();
+                    deliveries
+                        .retain(|delivery| delivery.record.data.pointer(pointer) != Some(equals));
+                    impact.matching_records_dropped += before - deliveries.len();
+                }
+                PipelineFault::SequenceReset {
+                    partition,
+                    at_sequence,
+                    to_sequence,
+                } => {
+                    for delivery in &mut deliveries {
+                        if delivery.record.partition == *partition
+                            && delivery.record.sequence >= *at_sequence
+                        {
+                            let distance = delivery.record.sequence - at_sequence;
+                            delivery.record.sequence = to_sequence.saturating_add(distance);
+                            impact.sequences_reset += 1;
+                        }
+                    }
+                }
+                PipelineFault::CardinalityExplosion {
+                    every,
+                    offset,
+                    pointer,
+                    prefix,
+                } => {
+                    for (index, delivery) in deliveries.iter_mut().enumerate() {
+                        if selected(index, *every, *offset) {
+                            let field =
+                                delivery.record.data.pointer_mut(pointer).with_context(|| {
+                                    format!(
+                                        "record {} does not contain JSON Pointer '{}'",
+                                        delivery.record.sequence, pointer
+                                    )
+                                })?;
+                            *field = Value::String(format!(
+                                "{}-{}-{}",
+                                prefix, delivery.record.partition, delivery.record.sequence
+                            ));
+                            impact.cardinality_values_created += 1;
+                        }
+                    }
+                }
+                PipelineFault::KeyCollapse { every, offset, key } => {
+                    for (index, delivery) in deliveries.iter_mut().enumerate() {
+                        if selected(index, *every, *offset) {
+                            delivery.record.key = Some(key.clone());
+                            impact.keys_collapsed += 1;
+                        }
+                    }
                 }
             }
         }
@@ -650,5 +747,48 @@ mod tests {
     fn parser_names_the_bad_jsonl_record() {
         let error = parse_json_lines("{\"sequence\":1}\nnot-json").unwrap_err();
         assert!(error.to_string().contains("pipeline record 2"));
+    }
+
+    #[test]
+    fn content_aware_faults_cover_cdc_crypto_and_telemetry_streams() {
+        let mut input = records();
+        for record in &mut input {
+            record.data["tenant"] = json!("stable");
+        }
+        input[1].data["kind"] = json!("snapshot");
+        input[2].data["kind"] = json!("transaction_end");
+        input[3].data["kind"] = json!("metric");
+        let plan = PipelineFaultPlan {
+            seed: 99,
+            faults: vec![
+                PipelineFault::DropMatching {
+                    pointer: "/kind".into(),
+                    equals: json!("transaction_end"),
+                },
+                PipelineFault::SequenceReset {
+                    partition: "orders".into(),
+                    at_sequence: 5,
+                    to_sequence: 1,
+                },
+                PipelineFault::CardinalityExplosion {
+                    every: 2,
+                    offset: 1,
+                    pointer: "/tenant".into(),
+                    prefix: "chaos".into(),
+                },
+                PipelineFault::KeyCollapse {
+                    every: 2,
+                    offset: 0,
+                    key: "hot-partition".into(),
+                },
+            ],
+        };
+        let result = evidence(&input, &plan, &PipelineBudget::default()).unwrap();
+        assert_eq!(result.impact.matching_records_dropped, 1);
+        assert!(result.impact.sequences_reset > 0);
+        assert!(result.impact.cardinality_values_created > 0);
+        assert!(result.impact.keys_collapsed > 0);
+        assert!(result.disruption_observed);
+        assert!(result.restoration_verified);
     }
 }
