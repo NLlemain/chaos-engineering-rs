@@ -78,6 +78,7 @@ pub async fn execute(args: PackArgs) -> Result<()> {
 }
 
 fn catalog() -> Result<PackCatalog> {
+    chaos_packs::validate_cli_compatibility(CATALOG_JSON, env!("CARGO_PKG_VERSION"))?;
     let catalog: PackCatalog = serde_json::from_str(CATALOG_JSON)?;
     let mut ids = HashSet::new();
     for entry in &catalog.packs {

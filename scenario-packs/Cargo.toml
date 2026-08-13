@@ -15,4 +15,5 @@ include = ["src/**", "catalog.json", "**/*.yaml", "**/*.md"]
 
 [dependencies]
 anyhow = { workspace = true }
+semver = "1.0"
 serde_json = { workspace = true }

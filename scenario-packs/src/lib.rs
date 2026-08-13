@@ -1,6 +1,7 @@
 //! Curated protocol-specific scenarios for `chaos-engineering-rs`.
 
 use anyhow::{bail, Context, Result};
+use semver::{Version, VersionReq};
 use serde_json::{Map, Value};
 use std::{collections::HashSet, path::Path};
 
@@ -21,6 +22,28 @@ const KNOWN_CATEGORIES: &[&str] = &[
 ];
 const KNOWN_STATUSES: &[&str] = &["stable", "experimental", "planned"];
 
+/// Validate that a CLI version is allowed to consume this pack index.
+pub fn validate_cli_compatibility(catalog_json: &str, cli_version: &str) -> Result<()> {
+    let root: Value = serde_json::from_str(catalog_json).context("catalog field '<document>'")?;
+    let requirement = root
+        .pointer("/compatibility/cli")
+        .and_then(Value::as_str)
+        .context("catalog field 'compatibility.cli': expected a semantic-version requirement")?;
+    let requirement = VersionReq::parse(requirement)
+        .context("catalog field 'compatibility.cli': invalid semantic-version requirement")?;
+    let version =
+        Version::parse(cli_version).context("CLI version is not valid semantic version")?;
+    if requirement.matches(&version) {
+        Ok(())
+    } else {
+        bail!(
+            "scenario-pack index requires chaos CLI '{}', but this is version {}",
+            requirement,
+            version
+        )
+    }
+}
+
 /// Validate catalog metadata and parse every referenced scenario from a repository checkout.
 pub fn validate_catalog<F>(
     catalog_json: &str,
@@ -31,8 +54,22 @@ where
     F: FnMut(&str, &str) -> Result<()>,
 {
     let root: Value = serde_json::from_str(catalog_json).context("catalog field '<document>'")?;
-    if root.get("schema_version").and_then(Value::as_u64) != Some(1) {
-        bail!("catalog field 'schema_version': expected integer 1");
+    if root.get("schema_version").and_then(Value::as_u64) != Some(2) {
+        bail!("catalog field 'schema_version': expected integer 2");
+    }
+    let index_version = root
+        .get("index_version")
+        .and_then(Value::as_str)
+        .context("catalog field 'index_version': expected semantic version")?;
+    Version::parse(index_version)
+        .context("catalog field 'index_version': invalid semantic version")?;
+    validate_cli_compatibility(catalog_json, env!("CARGO_PKG_VERSION"))?;
+    if root
+        .pointer("/compatibility/scenario_schema")
+        .and_then(Value::as_u64)
+        != Some(1)
+    {
+        bail!("catalog field 'compatibility.scenario_schema': expected integer 1");
     }
     let packs = root
         .get("packs")
@@ -191,7 +228,12 @@ mod tests {
     fn invalid_status_names_the_pack_and_field() {
         let repository_root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
         let catalog = serde_json::json!({
-            "schema_version": 1,
+            "schema_version": 2,
+            "index_version": "0.3.0",
+            "compatibility": {
+                "cli": ">=0.2.1, <0.4.0",
+                "scenario_schema": 1
+            },
             "packs": [{
                 "id": "bad-status-pack",
                 "title": "Bad status fixture",
@@ -213,5 +255,14 @@ mod tests {
                 .contains("pack 'bad-status-pack' field 'status'"),
             "{error:#}"
         );
+    }
+
+    #[test]
+    fn compatibility_rejects_unsupported_cli_versions() {
+        assert!(validate_cli_compatibility(CATALOG_JSON, "0.2.1").is_ok());
+        let error = validate_cli_compatibility(CATALOG_JSON, "0.4.0").unwrap_err();
+        assert!(error
+            .to_string()
+            .contains("requires chaos CLI '>=0.2.1, <0.4.0'"));
     }
 }
