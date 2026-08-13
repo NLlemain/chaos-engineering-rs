@@ -113,6 +113,11 @@ pub trait Injector: Send + Sync {
     fn required_capabilities(&self) -> Vec<String> {
         vec![]
     }
+
+    /// Report capabilities for a target operating system when generating portable metadata.
+    fn required_capabilities_for(&self, _platform: InjectorPlatform) -> Vec<String> {
+        self.required_capabilities()
+    }
 }
 
 pub type DynInjector = Arc<dyn Injector>;
@@ -146,7 +151,17 @@ impl InjectorRegistry {
     }
 
     pub fn list_info_for(&self, platform: InjectorPlatform) -> Vec<InjectorInfo> {
-        self.collect_info(|injector| injector.status_for(platform))
+        let mut injectors: Vec<_> = self
+            .injectors
+            .values()
+            .map(|injector| InjectorInfo {
+                name: injector.name().to_string(),
+                status: injector.status_for(platform),
+                required_capabilities: injector.required_capabilities_for(platform),
+            })
+            .collect();
+        injectors.sort_by(|left, right| left.name.cmp(&right.name));
+        injectors
     }
 
     fn collect_info(&self, status: impl Fn(&DynInjector) -> InjectorStatus) -> Vec<InjectorInfo> {

@@ -56,4 +56,12 @@ fn list_json_can_target_a_release_platform() {
     assert_eq!(status("packet_loss"), Some("experimental"));
     assert_eq!(status("process_freeze"), Some("stable"));
     assert_eq!(status("windows_fault"), Some("planned"));
+    let process_kill = injectors
+        .iter()
+        .find(|injector| injector["name"] == "process_kill")
+        .unwrap();
+    assert_eq!(
+        process_kill["required_capabilities"][0],
+        "Permission to signal the target process"
+    );
 }

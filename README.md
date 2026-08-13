@@ -152,8 +152,8 @@ Status is part of the runtime registry and is limited to **stable**, **experimen
 | `network_latency` | experimental | CAP_NET_ADMIN |
 | `nginx_fault` | planned | None |
 | `packet_loss` | experimental | CAP_NET_ADMIN |
-| `process_freeze` | stable | None |
-| `process_kill` | experimental | Process termination rights |
+| `process_freeze` | stable | Permission to signal the target process |
+| `process_kill` | experimental | Permission to signal the target process |
 | `socket_corrupt` | planned | CAP_NET_RAW, CAP_NET_ADMIN |
 | `tcp_reset` | experimental | CAP_NET_ADMIN |
 | `windows_fault` | planned | None |

@@ -139,6 +139,19 @@ impl Injector for ProcessFreezeInjector {
             Vec::new()
         }
     }
+
+    fn required_capabilities_for(
+        &self,
+        platform: crate::injectors::InjectorPlatform,
+    ) -> Vec<String> {
+        match platform {
+            crate::injectors::InjectorPlatform::Linux
+            | crate::injectors::InjectorPlatform::Macos => {
+                vec!["Permission to signal the target process".to_string()]
+            }
+            crate::injectors::InjectorPlatform::Windows => Vec::new(),
+        }
+    }
 }
 
 #[derive(Default)]

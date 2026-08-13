@@ -282,6 +282,21 @@ impl Injector for ProcessKillInjector {
             vec!["Permission to signal the target process".to_string()]
         }
     }
+
+    fn required_capabilities_for(
+        &self,
+        platform: crate::injectors::InjectorPlatform,
+    ) -> Vec<String> {
+        match platform {
+            crate::injectors::InjectorPlatform::Windows => {
+                vec!["Process termination rights".to_string()]
+            }
+            crate::injectors::InjectorPlatform::Linux
+            | crate::injectors::InjectorPlatform::Macos => {
+                vec!["Permission to signal the target process".to_string()]
+            }
+        }
+    }
 }
 
 #[derive(Default)]
