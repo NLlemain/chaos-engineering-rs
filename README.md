@@ -34,15 +34,21 @@ cargo build --locked --release -p chaos_cli
 ./target/release/chaos list
 ```
 
-Homebrew is available now:
+Homebrew:
 
 ```bash
 brew install Ninian-Lemain/chaos-engineering/chaos-engineering-rs
 ```
 
-The [WinGet submission](https://github.com/microsoft/winget-pkgs/pull/411247) is awaiting Microsoft review. After merge, install it with `winget install NinianLemain.ChaosEngineeringRs`.
+WinGet:
 
-On Windows, run `target\release\chaos.exe`. Before an experiment:
+```powershell
+winget install --id NinianLemain.ChaosEngineeringRs --exact
+```
+
+Upgrade with `winget upgrade --id NinianLemain.ChaosEngineeringRs --exact`.
+
+On Windows, run `chaos` or `target\release\chaos.exe`. Before an experiment:
 
 ```bash
 chaos validate scenarios/slo_gate.yaml
@@ -238,7 +244,7 @@ Integration tests verify that stable effects disrupt their target and restore re
 | GitHub Action | `action.yml` runs a scenario as an SLO gate on Windows, Linux, and macOS |
 | Container | GHCR workflow builds amd64/arm64 images |
 | Homebrew | Live at [`Ninian-Lemain/homebrew-chaos-engineering`](https://github.com/Ninian-Lemain/homebrew-chaos-engineering) |
-| WinGet | [Validated manifest submitted](https://github.com/microsoft/winget-pkgs/pull/411247); awaiting Microsoft review |
+| WinGet | Published as [`NinianLemain.ChaosEngineeringRs`](https://github.com/microsoft/winget-pkgs/tree/master/manifests/n/NinianLemain/ChaosEngineeringRs) |
 | crates.io | Publish workflow is ready; the first release requires a personal `CARGO_REGISTRY_TOKEN` |
 
 Verify a downloaded release artifact with GitHub CLI:

@@ -2,15 +2,24 @@
 
 ## Install
 
-Download an archive from [GitHub Releases](https://github.com/Ninian-Lemain/chaos-engineering-rs/releases), or build the CLI with Rust 1.82 or newer:
+Download an archive from [GitHub Releases](https://github.com/Ninian-Lemain/chaos-engineering-rs/releases), install via package manager, or build from source:
+
+```powershell
+# WinGet (Windows)
+winget install --id NinianLemain.ChaosEngineeringRs --exact
+```
 
 ```bash
+# Homebrew (macOS and Linux)
+brew install Ninian-Lemain/chaos-engineering/chaos-engineering-rs
+
+# From source
 git clone https://github.com/Ninian-Lemain/chaos-engineering-rs
 cd chaos-engineering-rs
 cargo build --locked --release -p chaos_cli
 ```
 
-The binary is `target/release/chaos` on Unix and `target\release\chaos.exe` on Windows. The examples below assume it is on `PATH`.
+The binary is `target/release/chaos` on Unix and `target\release\chaos.exe` on Windows (or `chaos` on `PATH` if installed via WinGet/Homebrew). The examples below assume it is on `PATH`.
 
 ## Inspect The Environment
 
