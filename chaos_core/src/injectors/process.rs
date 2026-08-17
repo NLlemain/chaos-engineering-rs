@@ -449,7 +449,7 @@ mod tests {
             .spawn()
             .unwrap();
         #[cfg(unix)]
-        let mut child = Command::new("sh").args(["-c", "sleep 30"]).spawn().unwrap();
+        let mut child = Command::new("sleep").arg("30").spawn().unwrap();
 
         let pid = child.id().unwrap();
         let target = Target::process(pid);
