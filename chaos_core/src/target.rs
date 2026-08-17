@@ -174,7 +174,8 @@ impl Target {
                     }
 
                     let mut status = 0;
-                    let wait_res = unsafe { libc::waitpid(*pid as libc::pid_t, &mut status, libc::WNOHANG) };
+                    let wait_res =
+                        unsafe { libc::waitpid(*pid as libc::pid_t, &mut status, libc::WNOHANG) };
                     if wait_res > 0 {
                         return false;
                     }
