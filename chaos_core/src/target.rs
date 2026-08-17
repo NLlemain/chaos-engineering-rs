@@ -169,37 +169,27 @@ impl Target {
                 {
                     use nix::sys::signal::kill;
                     use nix::unistd::Pid;
-                    match kill(Pid::from_raw(*pid as i32), None) {
-                        Ok(()) => {
-                            use sysinfo::{ProcessStatus, System};
-                            let mut sys = System::new_all();
-                            sys.refresh_processes();
-                            if let Some(process) = sys.process(sysinfo::Pid::from(*pid as usize)) {
-                                !matches!(
-                                    process.status(),
-                                    ProcessStatus::Dead | ProcessStatus::Zombie
-                                )
-                            } else {
-                                true
-                            }
-                        }
-                        Err(nix::errno::Errno::EPERM) => true,
-                        Err(_) => false,
+                    if let Err(nix::errno::Errno::ESRCH) = kill(Pid::from_raw(*pid as i32), None) {
+                        return false;
+                    }
+
+                    let mut status = 0;
+                    let wait_res = unsafe { libc::waitpid(*pid as libc::pid_t, &mut status, libc::WNOHANG) };
+                    if wait_res > 0 {
+                        return false;
                     }
                 }
-                #[cfg(windows)]
-                {
-                    use sysinfo::{ProcessStatus, System};
-                    let mut sys = System::new_all();
-                    sys.refresh_processes();
-                    sys.process(sysinfo::Pid::from(*pid as usize))
-                        .is_some_and(|process| {
-                            !matches!(
-                                process.status(),
-                                ProcessStatus::Dead | ProcessStatus::Zombie
-                            )
-                        })
-                }
+
+                use sysinfo::{ProcessStatus, System};
+                let mut sys = System::new_all();
+                sys.refresh_processes();
+                sys.process(sysinfo::Pid::from(*pid as usize))
+                    .is_some_and(|process| {
+                        !matches!(
+                            process.status(),
+                            ProcessStatus::Dead | ProcessStatus::Zombie
+                        )
+                    })
             }
             Target::Network { address } => {
                 // Check if address is reachable
