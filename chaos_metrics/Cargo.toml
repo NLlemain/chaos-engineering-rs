@@ -13,8 +13,8 @@ keywords = ["chaos-engineering", "prometheus", "opentelemetry", "slo", "observab
 categories = ["development-tools::testing", "asynchronous"]
 
 [dependencies]
-chaos_core = { version = "0.4.0", path = "../chaos_core" }
-chaos_scenarios = { version = "0.4.0", path = "../chaos_scenarios" }
+chaos_core = { version = "0.4.2", path = "../chaos_core" }
+chaos_scenarios = { version = "0.4.2", path = "../chaos_scenarios" }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
